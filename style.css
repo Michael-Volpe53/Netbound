@@ -1,0 +1,46 @@
+.post-media {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 0 0 0.7rem 0;
+  width: 100%;
+}
+
+.post-img {
+  width: 70%;
+  max-width: 350px;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;   /* 👈 KEY FIX (no cropping) */
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  display: block;
+  background: #000;      /* optional: fills empty space nicely */
+}
+
+.post-video {
+  width: 70%;
+  max-width: 350px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: black;
+  display: block;
+}
+
+.post-yt-wrap {
+  width: 70%;
+  max-width: 350px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  overflow: hidden;
+  background: black;
+  display: block;
+}
+
+.post-yt {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
