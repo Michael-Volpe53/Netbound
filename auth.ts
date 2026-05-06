@@ -1,8 +1,41 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-const ADJS = ["Silent","Crimson","Golden","Ivory","Shadow","Neon","Cobalt","Mystic","Arctic","Velvet","Jade","Amber","Silver","Onyx","Coral","Phantom","Russet","Indigo","Sage","Dusk","Lunar","Solar","Cosmic","Storm","Swift","Brave","Calm","Bold","Wild","Sharp","Frozen","Hollow","Ashen","Bitter","Clever","Daring","Eager","Faint","Gentle","Humble"];
-const ANIMALS = ["Fox","Wolf","Hawk","Lynx","Bear","Crow","Deer","Otter","Seal","Raven","Owl","Mink","Hare","Puma","Elk","Viper","Crane","Bison","Swan","Kite","Wren","Toad","Mole","Pike","Finch","Moose","Badger","Quail","Stoat","Ibis","Gecko","Shrew","Bream","Dingo","Egret","Ferret","Grebe","Heron","Iguana","Jackal"];
+const ADJS = [
+  "Silent","Crimson","Golden","Ivory","Shadow","Neon","Cobalt","Mystic","Arctic","Velvet",
+  "Jade","Amber","Silver","Onyx","Coral","Phantom","Russet","Indigo","Sage","Dusk",
+  "Lunar","Solar","Cosmic","Storm","Swift","Brave","Calm","Bold","Wild","Sharp",
+  "Frozen","Hollow","Ashen","Bitter","Clever","Daring","Eager","Faint","Gentle","Humble",
+
+  "Radiant","Midnight","Obsidian","Emerald","Scarlet","Azure","Vivid","Muted","Electric","Glacial",
+  "Roaming","Wandering","Hidden","Lost","Drifting","Roaring","Whispering","Burning","Fading","Rising",
+  "Broken","Ancient","Modern","Quiet","Restless","Endless","Fragile","Iron","Steel","Crystal",
+  "Wildfire","Thunder","Lightning","Misty","Stormy","Dusky","Bright","Shadowed","Nomad","Urban",
+
+
+  "Abyssal","Sable","Ivory","Rogue","Frosted","Primal","Echoing","Static","Nocturnal","Solaris",
+  "Astral","Titan","Luminous","Verdant","Ebon","Celestial","Runic","Gilded","Bleak","Forsaken",
+  "Worn","Veiled","Sealed","Cursed","Blessed","Savage","Untamed","Infinite","Silentborn","Nightfall",
+  "Daybreak","Afterlight","Frontier","Drifted","Woven","Fractured","Hardened","Shimmering","Blazing","Smoldering",
+  "Polar","Equinox","Horizon","Monolithic","Obscure","Prime","Raw","Scarred","Vortex","Gravity"
+];
+const ANIMALS = [
+  "Fox","Wolf","Hawk","Lynx","Bear","Crow","Deer","Otter","Seal","Raven","Owl","Mink","Hare",
+  "Puma","Elk","Viper","Crane","Bison","Swan","Kite","Wren","Toad","Mole","Pike","Finch",
+  "Moose","Badger","Quail","Stoat","Ibis","Gecko","Shrew","Bream","Dingo","Egret","Ferret",
+  "Grebe","Heron","Iguana","Jackal",
+
+  "Falcon","Jaguar","Panther","Coyote","Boar","Lizard","Shark","Orca","Dolphin","Stag",
+  "Ram","Goat","Bat","Turtle","Python","Scorpion","Spider","Eagle","Vulture","Condor",
+  "Buffalo","Antelope","Caribou","Walrus","Penguin","Sealion","Octopus","Squid","Parrot","Macaw",
+  "Albatross","Mongoose","Leopard","Cougar","Hyena","Pheasant","Sparrow","Robin","Cardinal","Gull",
+
+  "Alligator","Crocodile","Komodo","Gecko","Chameleon","Ibis","Stork","Pelican","Flamingo","Heron",
+  "Kestrel","Osprey","Buzzard","Raptor","Wolfhound","Direwolf","Mustang","Hummingbird","Nightjar","Woodpecker",
+  "Eel","Stingray","Manta","Clam","Crab","Lobster","Sealight","Narwhal","Beluga","Haddock",
+  "Swordfish","Marlin","Barracuda","Piranha","Carp","Salmon","Trout","Bass","Anchovy","Sardine",
+  "Wolverine","Armadillo","Porcupine","Raccoon","Skunk","Beaver","Weasel","Ferret","Lemur","Capybara"
+];
 
 function genAlias() {
   return ADJS[Math.floor(Math.random() * ADJS.length)] + ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
