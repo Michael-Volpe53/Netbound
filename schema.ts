@@ -11,6 +11,10 @@ export default defineSchema({
     color: v.optional(v.string()),
     emoji: v.optional(v.string()),
     lastSeen: v.optional(v.number()),
+    // Badge tracking fields (auto-computed but cached for perf)
+    totalPostLikes: v.optional(v.number()),
+    totalPosts: v.optional(v.number()),
+    totalComments: v.optional(v.number()),
   })
     .index("by_username", ["username"])
     .index("by_alias", ["alias"]),
@@ -106,4 +110,56 @@ export default defineSchema({
   })
     .index("by_to", ["toUsername", "createdAt"])
     .index("by_to_unread", ["toUsername", "read"]),
+
+  // ── CHANGELOG / UPDATES ──
+  // Only the owner (specific username) can post these
+  changelog: defineTable({
+    authorUsername: v.string(), // should be the admin
+    title: v.string(),
+    body: v.string(),
+    version: v.optional(v.string()), // e.g. "v1.2"
+    tag: v.union(v.literal("feature"), v.literal("fix"), v.literal("improvement"), v.literal("upcoming")),
+    createdAt: v.number(),
+  })
+    .index("by_created", ["createdAt"]),
+
+  // ── POLLS (admin-created) ──
+  polls: defineTable({
+    authorUsername: v.string(), // admin only
+    question: v.string(),
+    options: v.array(v.string()),
+    endsAt: v.optional(v.number()), // timestamp when poll closes, optional
+    createdAt: v.number(),
+    closed: v.optional(v.boolean()),
+  })
+    .index("by_created", ["createdAt"]),
+
+  pollVotes: defineTable({
+    pollId: v.id("polls"),
+    username: v.string(),
+    optionIndex: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_poll", ["pollId"])
+    .index("by_poll_user", ["pollId", "username"]),
+
+  // ── COMMUNITY IDEAS ──
+  // One idea per user (enforced in mutation)
+  ideas: defineTable({
+    authorUsername: v.string(),
+    text: v.string(),
+    createdAt: v.number(),
+    voteCount: v.number(),
+  })
+    .index("by_author", ["authorUsername"])
+    .index("by_created", ["createdAt"]),
+
+  ideaVotes: defineTable({
+    ideaId: v.id("ideas"),
+    username: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_idea", ["ideaId"])
+    .index("by_idea_user", ["ideaId", "username"])
+    .index("by_user", ["username"]),
 });
