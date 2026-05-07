@@ -52,7 +52,7 @@ async function getProfile(ctx: any, username: string) {
   if (username === "michael-volpe") {
     badges.push({ id: "owner", label: "Owner", icon: "🛠️", color: "#f5c518", desc: "" });
   }
-  if (username === "test") {
+  if (username === "test" || username === "test1") {
     badges.push({ id: "tester", label: "Tester", icon: "🧪", color: "#2ecc8a", desc: "" });
   }
 
