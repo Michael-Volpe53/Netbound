@@ -126,7 +126,7 @@ export const getLeaderboard = query({
       });
       // Special badges
       if (u.username === "michael-volpe") badges.push({ id: "owner", label: "Owner", icon: "🛠️", color: "#f5c518", desc: "" });
-      if (u.username === "test")          badges.push({ id: "tester", label: "Tester", icon: "🧪", color: "#2ecc8a", desc: "" });
+      if (u.username === "test" || u.username === "test1")          badges.push({ id: "tester", label: "Tester", icon: "🧪", color: "#2ecc8a", desc: "" });
       return { ...u, badges, isTopLiked, isTopPoster, isMostActive };
     });
 
