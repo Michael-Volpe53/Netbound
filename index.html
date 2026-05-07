@@ -303,6 +303,16 @@ input, textarea { font-family: var(--sans); }
 .post-yt-wrap { width: 70%; max-width: 350px; aspect-ratio: 16 / 9; border-radius: 8px; border: 1px solid var(--border2); overflow: hidden; background: black; display: block; }
 .post-yt { width: 100%; height: 100%; border: none; display: block; }
 
+/* ── LOAD MORE BUTTON ── */
+.load-more-btn {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  width: 100%; padding: .75rem; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--text3); font-size: 13px; font-family: var(--mono);
+  cursor: pointer; transition: all .15s; margin-top: .25rem;
+}
+.load-more-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accentBg); }
+.load-more-btn:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ── STATUS BAR ── */
 .statusbar { height: 24px; background: var(--bg); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 1rem; gap: .5rem; font-size: 10px; color: var(--text3); font-family: var(--mono); flex-shrink: 0; }
 .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
@@ -781,23 +791,25 @@ import { ConvexClient } from "convex/browser";
 const CONVEX_URL = "https://cheerful-sturgeon-267.convex.cloud";
 
 // ══════════════════════════════════════════════════════════════
-// BANDWIDTH OPTIMIZATION STRATEGY:
+// BANDWIDTH OPTIMIZATION — KEY DECISIONS:
 //
-// LIVE subscriptions (onUpdate) — only for things that MUST be instant:
-//   • getMessages        — active chat only
-//   • getConversationPreviews — DM sidebar (throttled update)
-//   • getUnreadCount     — unread badge
-//   • getInboxRequests   — friend requests
-//   • getNotifications   — activity notifications
+// LIVE subscriptions (onUpdate) — ONLY 3, all lightweight:
+//   • getMessages        — active chat only (small payloads)
+//   • getUnreadCount     — single integer
+//   • getInboxRequests   — friend requests only
 //
-// POLLED every N seconds — everything else:
-//   • getTotalUserCount  — every 5 minutes (was ~5K calls!)
-//   • getFeed/getTrending — every 30 seconds
-//   • getLeaderboard     — every 60 seconds
-//   • getChangelog       — every 60 seconds
-//   • getPolls           — every 30 seconds
-//   • getIdeas           — every 30 seconds
+// ONE-TIME queries (client.query) with manual polling:
+//   • getConversationPreviews — polled every 15s (DM sidebar)
+//   • getNotifications (activity) — polled every 30s
+//   • getFeed/getTrending — polled every 60s (was live = 12GB!)
+//   • getLeaderboard — polled every 120s (was live = 9GB!)
+//   • getChangelog/getPolls/getIdeas — polled every 60s
+//   • getTotalUserCount — polled every 5 min
+//
+// PAGINATION: Feed loads 10 posts at a time, "View More" fetches next 10
 // ══════════════════════════════════════════════════════════════
+
+const PAGE_SIZE = 10;
 
 // ── STATE ──
 let client;
@@ -807,23 +819,34 @@ let currentConv = null;
 let convListData = [];
 let isAdmin = false;
 
-// Live subscription unsubs
-let messageUnsub = null, convUnsub = null, notifUnsub = null;
-let activityNotifUnsub = null, unreadMsgUnsub = null;
+// Live subscription unsubs (only 3!)
+let messageUnsub = null;
+let unreadMsgUnsub = null;
+let friendReqUnsub = null;
 
 // Poll intervals
+let convPreviewInterval = null;
+let activityNotifInterval = null;
 let userCountInterval = null;
 let feedInterval = null;
 let hubInterval = null;
 let heartbeatInterval = null;
 
+// Cached data (populated by polls)
+let cachedFriendReqs = [];
+let cachedActivityNotifs = [];
 let prevUnreadMsgCount = 0;
-let prevActivityNotifCount = 0;
+
+// Feed state
+let allFeedPosts = [];
+let feedVisibleCount = PAGE_SIZE;
 let currentFeedTab = 'new';
-let currentHubTab = 'leaderboard';
 let openCommentPostId = null;
 let composeMediaType = 'text';
 let composeImageData = null;
+
+// Hub state
+let currentHubTab = 'leaderboard';
 
 // User popup state
 let popupTargetUsername = null;
@@ -865,6 +888,7 @@ Object.assign(window, {
   switchMainTab, switchFeedTab, submitPost, updateComposeCount,
   reactToPost, toggleComments, submitComment, reactToComment, deletePost, deleteComment,
   setComposeMedia, triggerImagePick, handleImageFile,
+  loadMorePosts,
   switchHubTab,
   voteOnPoll, closePoll, deletePoll,
   voteOnIdea, submitIdea, deleteIdea,
@@ -965,35 +989,36 @@ async function bootApp() {
   show('app-screen');
   try { isAdmin = await client.query("hub:getIsAdmin", { token: sessionToken }); } catch(e){}
 
-  // Live subscriptions (only truly real-time needs)
-  subscribeConvList();
-  subscribeNotifs();
-  subscribeActivityNotifs();
-  subscribeUnreadMsgs();
+  // ── LIVE SUBSCRIPTIONS (only 3 lightweight ones) ──
+  subscribeUnreadMsgs();    // single integer — tiny
+  subscribeFriendReqs();    // friend requests — small, important
 
-  // Polled data (not real-time)
+  // ── POLLED DATA ──
+  startConvPreviewPolling(); // every 15s
+  startActivityNotifPolling(); // every 30s
   startUserCountPolling();   // every 5 min
   startHeartbeat();          // every 60s
 }
 
 function teardown() {
-  [messageUnsub, convUnsub, notifUnsub, activityNotifUnsub, unreadMsgUnsub].forEach(u => u && u());
-  [userCountInterval, feedInterval, hubInterval, heartbeatInterval].forEach(i => i && clearInterval(i));
-  messageUnsub = convUnsub = notifUnsub = activityNotifUnsub = unreadMsgUnsub = null;
-  userCountInterval = feedInterval = hubInterval = heartbeatInterval = null;
+  [messageUnsub, unreadMsgUnsub, friendReqUnsub].forEach(u => u && u());
+  [convPreviewInterval, activityNotifInterval, userCountInterval,
+   feedInterval, hubInterval, heartbeatInterval].forEach(i => i && clearInterval(i));
+  messageUnsub = unreadMsgUnsub = friendReqUnsub = null;
+  convPreviewInterval = activityNotifInterval = userCountInterval =
+  feedInterval = hubInterval = heartbeatInterval = null;
 }
 
 // ── HEARTBEAT ──
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
-  // Fire immediately, then every 60s
   client.mutation("auth:heartbeat", { token: sessionToken }).catch(()=>{});
-  heartbeatInterval = setInterval(async () => {
-    try { await client.mutation("auth:heartbeat", { token: sessionToken }); } catch(e){}
+  heartbeatInterval = setInterval(() => {
+    client.mutation("auth:heartbeat", { token: sessionToken }).catch(()=>{});
   }, 60000);
 }
 
-// ── USER COUNT — polled every 5 minutes ──
+// ── USER COUNT — polled every 5 min ──
 function startUserCountPolling() {
   if (userCountInterval) clearInterval(userCountInterval);
   async function fetchCount() {
@@ -1002,8 +1027,42 @@ function startUserCountPolling() {
       if (count !== undefined) document.getElementById('user-count-num').textContent = count;
     } catch(e) {}
   }
-  fetchCount(); // immediate first load
-  userCountInterval = setInterval(fetchCount, 5 * 60 * 1000); // every 5 min
+  fetchCount();
+  userCountInterval = setInterval(fetchCount, 5 * 60 * 1000);
+}
+
+// ── CONV PREVIEW — polled every 15s (was live subscription) ──
+function startConvPreviewPolling() {
+  if (convPreviewInterval) clearInterval(convPreviewInterval);
+  async function fetchPreviews() {
+    try {
+      const data = await client.query("messages:getConversationPreviews", { token: sessionToken });
+      if (data) { convListData = data; renderConvList(); }
+    } catch(e) {}
+  }
+  fetchPreviews();
+  convPreviewInterval = setInterval(fetchPreviews, 15000);
+}
+
+// ── ACTIVITY NOTIFS — polled every 30s (was live subscription) ──
+function startActivityNotifPolling() {
+  if (activityNotifInterval) clearInterval(activityNotifInterval);
+  async function fetchNotifs() {
+    try {
+      const notifs = await client.query("posts:getNotifications", { token: sessionToken });
+      if (!notifs) return;
+      const newUnread = notifs.filter(n => !n.read).length;
+      if (newUnread > cachedActivityNotifs.filter(n => !n.read).length) {
+        const newest = [...notifs].sort((a,b) => b.createdAt-a.createdAt).find(n => !n.read);
+        if (newest) showToast(notifLabel(newest, false));
+      }
+      cachedActivityNotifs = notifs;
+      updateNotifBadge();
+      if (document.getElementById('notifs-panel').classList.contains('open')) renderNotifsPanel();
+    } catch(e) {}
+  }
+  fetchNotifs();
+  activityNotifInterval = setInterval(fetchNotifs, 30000);
 }
 
 // ── MAIN TAB SWITCHING ──
@@ -1014,16 +1073,15 @@ function switchMainTab(tab) {
   });
   if (tab === 'feed') startFeedPolling();
   else stopFeedPolling();
-
   if (tab === 'hub') startHubPolling();
   else stopHubPolling();
 }
 
-// ── FEED POLLING — only while feed tab is visible ──
+// ── FEED POLLING — 60s while visible (was live = 12GB wasted!) ──
 function startFeedPolling() {
   stopFeedPolling();
-  loadFeedOnce(); // immediate
-  feedInterval = setInterval(loadFeedOnce, 30000); // every 30s
+  loadFeedOnce();
+  feedInterval = setInterval(loadFeedOnce, 60000);
 }
 function stopFeedPolling() {
   if (feedInterval) { clearInterval(feedInterval); feedInterval = null; }
@@ -1031,6 +1089,8 @@ function stopFeedPolling() {
 
 function switchFeedTab(tab) {
   currentFeedTab = tab;
+  feedVisibleCount = PAGE_SIZE;
+  allFeedPosts = [];
   document.querySelectorAll('.feed-tab-btn').forEach((b, i) => {
     b.classList.toggle('active', (i===0 && tab==='new') || (i===1 && tab==='trending'));
   });
@@ -1041,20 +1101,58 @@ async function loadFeedOnce() {
   const endpoint = currentFeedTab === 'trending' ? "posts:getTrending" : "posts:getFeed";
   try {
     const posts = await client.query(endpoint, { token: sessionToken });
-    if (posts) renderFeed(posts);
+    if (posts) {
+      allFeedPosts = posts;
+      renderFeedPage();
+    }
   } catch(e) {}
 }
 
-function renderFeed(posts) {
+function renderFeedPage() {
   const list = document.getElementById('feed-list');
-  if (!posts || posts.length === 0) { list.innerHTML = '<div class="hub-empty">nothing here yet — be first to post!</div>'; return; }
-  list.innerHTML = posts.map(p => renderPostCard(p)).join('');
+  if (!allFeedPosts || allFeedPosts.length === 0) {
+    list.innerHTML = '<div class="hub-empty">nothing here yet — be first to post!</div>';
+    return;
+  }
+  const visible = allFeedPosts.slice(0, feedVisibleCount);
+  let html = visible.map(p => renderPostCard(p)).join('');
+
+  if (feedVisibleCount < allFeedPosts.length) {
+    const remaining = allFeedPosts.length - feedVisibleCount;
+    html += `<button class="load-more-btn" id="load-more-btn" onclick="loadMorePosts()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      View more (${remaining} remaining)
+    </button>`;
+  } else if (allFeedPosts.length > PAGE_SIZE) {
+    html += `<div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono);padding:.75rem">all ${allFeedPosts.length} posts loaded</div>`;
+  }
+
+  list.innerHTML = html;
+
+  // Re-open comments section if one was open
+  if (openCommentPostId) {
+    const section = document.getElementById(`comments-${openCommentPostId}`);
+    if (section) {
+      section.classList.add('open');
+      loadComments(openCommentPostId);
+    }
+  }
+}
+
+function loadMorePosts() {
+  feedVisibleCount += PAGE_SIZE;
+  renderFeedPage();
+  // Scroll to where the new posts begin
+  const btn = document.getElementById('load-more-btn');
+  if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderPostCard(p) {
-  const likedClass   = p.myReaction === 'like' ? 'liked' : '';
-  const dislikedClass= p.myReaction === 'dislike' ? 'disliked' : '';
-  const deleteBtn = (p.isMe || isAdmin) ? `<button class="post-delete-btn" onclick="deletePost('${p._id}')" title="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>` : '';
+  const likedClass    = p.myReaction === 'like' ? 'liked' : '';
+  const dislikedClass = p.myReaction === 'dislike' ? 'disliked' : '';
+  const deleteBtn = (p.isMe || isAdmin)
+    ? `<button class="post-delete-btn" onclick="deletePost('${p._id}')" title="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
+    : '';
   const commentsOpen = openCommentPostId === p._id ? 'open' : '';
   let mediaHtml = '';
   if (p.type === 'image' && p.mediaUrl) {
@@ -1093,7 +1191,8 @@ function renderPostCard(p) {
     <div class="comments-section ${commentsOpen}" id="comments-${p._id}">
       <div id="comments-list-${p._id}"><div class="no-comments">loading…</div></div>
       <div class="comment-input-row">
-        <input class="comment-input" id="comment-input-${p._id}" placeholder="add a comment…" onkeydown="if(event.key==='Enter'){submitComment('${p._id}');event.preventDefault();}">
+        <input class="comment-input" id="comment-input-${p._id}" placeholder="add a comment…"
+          onkeydown="if(event.key==='Enter'){submitComment('${p._id}');event.preventDefault();}">
         <button class="comment-send-btn" onclick="submitComment('${p._id}')">send</button>
       </div>
     </div>
@@ -1103,18 +1202,24 @@ function renderPostCard(p) {
 async function reactToPost(postId, reaction) {
   try {
     await client.mutation("posts:reactToPost", { token: sessionToken, postId, reaction });
-    loadFeedOnce(); // refresh feed after reaction
+    await loadFeedOnce();
   } catch(e) {}
 }
 async function deletePost(postId) {
   if (!confirm('Delete this post?')) return;
-  try { await client.mutation("posts:deletePost", { token: sessionToken, postId }); loadFeedOnce(); } catch(e) {}
+  try {
+    await client.mutation("posts:deletePost", { token: sessionToken, postId });
+    allFeedPosts = allFeedPosts.filter(p => p._id !== postId);
+    renderFeedPage();
+  } catch(e) {}
 }
 
 function toggleComments(postId) {
   const section = document.getElementById(`comments-${postId}`);
   const isOpen = section.classList.contains('open');
-  if (openCommentPostId && openCommentPostId !== postId) document.getElementById(`comments-${openCommentPostId}`)?.classList.remove('open');
+  if (openCommentPostId && openCommentPostId !== postId) {
+    document.getElementById(`comments-${openCommentPostId}`)?.classList.remove('open');
+  }
   if (isOpen) { section.classList.remove('open'); openCommentPostId = null; }
   else { section.classList.add('open'); openCommentPostId = postId; loadComments(postId); }
 }
@@ -1122,8 +1227,10 @@ function toggleComments(postId) {
 async function loadComments(postId) {
   const listEl = document.getElementById(`comments-list-${postId}`);
   if (!listEl) return;
-  try { const comments = await client.query("posts:getComments", { token: sessionToken, postId }); renderComments(postId, comments); }
-  catch(e) { listEl.innerHTML = '<div class="no-comments">error loading</div>'; }
+  try {
+    const comments = await client.query("posts:getComments", { token: sessionToken, postId });
+    renderComments(postId, comments);
+  } catch(e) { listEl.innerHTML = '<div class="no-comments">error loading</div>'; }
 }
 
 function renderComments(postId, comments) {
@@ -1132,7 +1239,9 @@ function renderComments(postId, comments) {
   if (!comments || comments.length === 0) { listEl.innerHTML = '<div class="no-comments">no comments yet</div>'; return; }
   listEl.innerHTML = comments.map(c => {
     const likedClass = c.myReaction === 'like' ? 'liked' : '';
-    const deleteBtn = (c.isMe || isAdmin) ? `<button class="comment-react" onclick="deleteComment('${c._id}','${postId}')" style="color:var(--red)">✕</button>` : '';
+    const deleteBtn = (c.isMe || isAdmin)
+      ? `<button class="comment-react" onclick="deleteComment('${c._id}','${postId}')" style="color:var(--red)">✕</button>`
+      : '';
     const avClick = c.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(c.authorUsername)}')"`;
     return `<div class="comment-row">
       <div class="comment-av" style="border-color:${c.color};cursor:pointer" ${avClick}>${c.emoji}</div>
@@ -1153,13 +1262,24 @@ async function submitComment(postId) {
   const input = document.getElementById(`comment-input-${postId}`);
   const text = input.value.trim(); if (!text) return;
   input.value = '';
-  try { await client.mutation("posts:addComment", { token: sessionToken, postId, text }); await loadComments(postId); loadFeedOnce(); } catch(e) {}
+  try {
+    await client.mutation("posts:addComment", { token: sessionToken, postId, text });
+    await loadComments(postId);
+    await loadFeedOnce();
+  } catch(e) {}
 }
 async function deleteComment(commentId, postId) {
-  try { await client.mutation("posts:deleteComment", { token: sessionToken, commentId }); await loadComments(postId); loadFeedOnce(); } catch(e){}
+  try {
+    await client.mutation("posts:deleteComment", { token: sessionToken, commentId });
+    await loadComments(postId);
+    await loadFeedOnce();
+  } catch(e) {}
 }
 async function reactToComment(commentId, postId, reaction) {
-  try { await client.mutation("posts:reactToComment", { token: sessionToken, commentId, reaction }); await loadComments(postId); } catch(e){}
+  try {
+    await client.mutation("posts:reactToComment", { token: sessionToken, commentId, reaction });
+    await loadComments(postId);
+  } catch(e) {}
 }
 
 function updateComposeCount() {
@@ -1169,7 +1289,8 @@ function updateComposeCount() {
 function setComposeMedia(type) {
   composeMediaType = type; composeImageData = null;
   document.querySelectorAll('.compose-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
-  const imgRow = document.getElementById('compose-img-row'), vidRow = document.getElementById('compose-vid-row');
+  const imgRow = document.getElementById('compose-img-row');
+  const vidRow = document.getElementById('compose-vid-row');
   if (imgRow) imgRow.style.display = type === 'image' ? 'flex' : 'none';
   if (vidRow) vidRow.style.display = type === 'video' ? 'flex' : 'none';
   const preview = document.getElementById('compose-img-preview');
@@ -1182,7 +1303,11 @@ function handleImageFile(input) {
   const file = input.files[0]; if (!file) return;
   if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5MB'); return; }
   const reader = new FileReader();
-  reader.onload = e => { composeImageData = e.target.result; const preview = document.getElementById('compose-img-preview'); preview.src = composeImageData; preview.style.display = 'block'; };
+  reader.onload = e => {
+    composeImageData = e.target.result;
+    const preview = document.getElementById('compose-img-preview');
+    preview.src = composeImageData; preview.style.display = 'block';
+  };
   reader.readAsDataURL(file);
 }
 async function submitPost() {
@@ -1200,28 +1325,29 @@ async function submitPost() {
     await client.mutation("posts:createPost", payload);
     document.getElementById('compose-input').value = '';
     document.getElementById('compose-count').textContent = '0 / 500';
-    composeImageData = null; setComposeMedia('text');
-    loadFeedOnce(); // refresh after posting
+    composeImageData = null;
+    setComposeMedia('text');
+    feedVisibleCount = PAGE_SIZE;
+    await loadFeedOnce();
   } catch(e) { showToast('Failed to post'); }
   finally { btn.disabled = false; btn.textContent = 'Post'; }
 }
 
-// ── CONV LIST — live subscription (needed for real-time DMs) ──
-function subscribeConvList() {
-  if (convUnsub) convUnsub();
-  convUnsub = client.onUpdate("messages:getConversationPreviews", { token: sessionToken }, (data) => {
-    if (!data) return; convListData = data; renderConvList();
-  });
-}
+// ── CONV LIST — rendered from polled data ──
 function renderConvList(filter = '') {
   const q = (filter || document.getElementById('conv-search').value || '').toLowerCase();
   const list = document.getElementById('conv-list');
   let items = convListData;
   if (q) items = items.filter(c => c.alias.toLowerCase().includes(q));
-  if (items.length === 0) { list.innerHTML = '<div class="empty-list"><div class="empty-list-icon">👥</div>no friends yet</div>'; return; }
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-list"><div class="empty-list-icon">👥</div>no friends yet</div>';
+    return;
+  }
   list.innerHTML = items.map(c => {
     const active = currentConv === c.username ? 'active' : '';
-    const preview = c.lastMessage ? (c.lastMessage.from === myUsername ? 'you: ' : '') + c.lastMessage.text : 'start a conversation';
+    const preview = c.lastMessage
+      ? (c.lastMessage.from === myUsername ? 'you: ' : '') + c.lastMessage.text
+      : 'start a conversation';
     const ts = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
     const unreadHtml = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
     const onlineDotHtml = `<div class="online-dot ${c.isOnline ? 'visible' : ''}"></div>`;
@@ -1245,28 +1371,44 @@ function filterConvs() { renderConvList(document.getElementById('conv-search').v
 
 // ── MESSAGES — live subscription for active chat only ──
 function openConv(username, alias, emoji, color) {
-  if (!alias) { const f = convListData.find(c=>c.username===username); alias=f?.alias??username; emoji=f?.emoji??"🦊"; color=f?.color??"#5b7fff"; }
-  currentConv = username; closeAllPanels(); renderConvList();
+  if (!alias) {
+    const f = convListData.find(c => c.username === username);
+    alias = f?.alias ?? username; emoji = f?.emoji ?? "🦊"; color = f?.color ?? "#5b7fff";
+  }
+  currentConv = username;
+  closeAllPanels();
+  renderConvList();
   hide('chat-placeholder');
   const cv = document.getElementById('chat-view'); cv.style.display = 'flex';
-  const chatAv = document.getElementById('chat-av'); chatAv.textContent = emoji || '🦊'; chatAv.style.borderColor = color || '#5b7fff';
+  const chatAv = document.getElementById('chat-av');
+  chatAv.textContent = emoji || '🦊'; chatAv.style.borderColor = color || '#5b7fff';
   document.getElementById('chat-head-name').textContent = alias;
-  const friend = convListData.find(c=>c.username===username);
-  document.getElementById('chat-head-sub').innerHTML = friend?.isOnline ? `<span class="online-text">● online</span>` : `<span>friend</span>`;
-  document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">loading…</div>';
+  const friend = convListData.find(c => c.username === username);
+  document.getElementById('chat-head-sub').innerHTML = friend?.isOnline
+    ? `<span class="online-text">● online</span>`
+    : `<span>friend</span>`;
+  document.getElementById('chat-messages').innerHTML =
+    '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">loading…</div>';
+
   if (messageUnsub) { messageUnsub(); messageUnsub = null; }
-  messageUnsub = client.onUpdate("messages:getMessages", { token: sessionToken, otherUsername: username }, (msgs) => {
-    if (!msgs) return;
-    renderMessages(msgs);
-    client.mutation("messages:markRead", { token: sessionToken, otherUsername: username }).catch(()=>{});
-  });
+  messageUnsub = client.onUpdate("messages:getMessages",
+    { token: sessionToken, otherUsername: username },
+    (msgs) => {
+      if (!msgs) return;
+      renderMessages(msgs);
+      client.mutation("messages:markRead", { token: sessionToken, otherUsername: username }).catch(()=>{});
+    }
+  );
   document.getElementById('chat-input').focus();
 }
 
 function renderMessages(msgs) {
   const container = document.getElementById('chat-messages');
   const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
-  if (msgs.length === 0) { container.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">no messages yet — say hello!</div>'; return; }
+  if (msgs.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">no messages yet — say hello!</div>';
+    return;
+  }
   let html = '', lastDate = '', lastFrom = '';
   for (let i = 0; i < msgs.length; i++) {
     const m = msgs[i];
@@ -1280,7 +1422,11 @@ function renderMessages(msgs) {
     if (sameAsNext) groupClass += ' grouped-bottom';
     const showAv = !sameAsNext && !m.isMe;
     const avColor = m.otherColor || '#5b7fff', avEmoji = m.otherEmoji || '🦊';
-    const avHtml = m.isMe ? `<div class="msg-av-spacer"></div>` : showAv ? `<div class="msg-av-small" style="border-color:${avColor}">${avEmoji}</div>` : `<div class="msg-av-spacer"></div>`;
+    const avHtml = m.isMe
+      ? `<div class="msg-av-spacer"></div>`
+      : showAv
+        ? `<div class="msg-av-small" style="border-color:${avColor}">${avEmoji}</div>`
+        : `<div class="msg-av-spacer"></div>`;
     const otherColorStyle = !m.isMe ? `style="--otherColor:${avColor}"` : '';
     html += `<div class="msg-row ${side}${groupClass}" style="margin-bottom:${sameAsNext ? '.1rem' : '.55rem'}">
       ${avHtml}
@@ -1308,13 +1454,14 @@ async function sendMsg() {
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
-// ── UNREAD — live subscription ──
+// ── UNREAD — live subscription (single integer, negligible bandwidth) ──
 function subscribeUnreadMsgs() {
   if (unreadMsgUnsub) unreadMsgUnsub();
   unreadMsgUnsub = client.onUpdate("messages:getUnreadCount", { token: sessionToken }, (count) => {
     if (count === undefined) return;
     const badge = document.getElementById('tab-dms-notif');
-    if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; } else { badge.style.display = 'none'; }
+    if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+    else { badge.style.display = 'none'; }
     if (count > prevUnreadMsgCount) {
       const newUnread = convListData.find(c => c.unread > 0 && c.username !== currentConv);
       showToast(newUnread ? `New message from ${newUnread.alias}` : 'New message received', true);
@@ -1323,49 +1470,54 @@ function subscribeUnreadMsgs() {
   });
 }
 
-// ── NOTIFS — live subscriptions ──
-let cachedFriendReqs = [], cachedActivityNotifs = [];
+// ── FRIEND REQUESTS — live subscription (small, important for UX) ──
+function subscribeFriendReqs() {
+  if (friendReqUnsub) friendReqUnsub();
+  friendReqUnsub = client.onUpdate("friends:getInboxRequests", { token: sessionToken }, (reqs) => {
+    if (!reqs) return;
+    cachedFriendReqs = reqs;
+    updateNotifBadge();
+    if (document.getElementById('notifs-panel').classList.contains('open')) renderNotifsPanel();
+  });
+}
+
+// ── NOTIF BADGE & PANEL ──
 function updateNotifBadge() {
-  const total = cachedFriendReqs.filter(r=>r.status==='pending').length + cachedActivityNotifs.filter(n=>!n.read).length;
+  const total = cachedFriendReqs.filter(r => r.status === 'pending').length
+              + cachedActivityNotifs.filter(n => !n.read).length;
   const badge = document.getElementById('notif-badge');
-  badge.textContent = total; badge.style.display = total > 0 ? 'flex' : 'none';
+  badge.textContent = total;
+  badge.style.display = total > 0 ? 'flex' : 'none';
 }
-function subscribeNotifs() {
-  if (notifUnsub) notifUnsub();
-  notifUnsub = client.onUpdate("friends:getInboxRequests", { token: sessionToken }, (reqs) => {
-    if (!reqs) return; cachedFriendReqs = reqs; updateNotifBadge();
-    if (document.getElementById('notifs-panel').classList.contains('open')) renderNotifsPanel();
-  });
-}
-function subscribeActivityNotifs() {
-  if (activityNotifUnsub) activityNotifUnsub();
-  activityNotifUnsub = client.onUpdate("posts:getNotifications", { token: sessionToken }, (notifs) => {
-    if (!notifs) return;
-    const newUnread = notifs.filter(n=>!n.read).length;
-    if (newUnread > prevActivityNotifCount) {
-      const newest = [...notifs].sort((a,b)=>b.createdAt-a.createdAt).find(n=>!n.read);
-      if (newest) showToast(notifLabel(newest, false));
-    }
-    prevActivityNotifCount = newUnread; cachedActivityNotifs = notifs; updateNotifBadge();
-    if (document.getElementById('notifs-panel').classList.contains('open')) renderNotifsPanel();
-  });
-}
-function notifLabel(n, html=true) {
-  const name = html ? `<strong style="color:${n.fromColor||'var(--accent)'}">${esc(n.fromAlias)}</strong>` : n.fromAlias;
-  const snippet = n.postSnippet ? ` "${n.postSnippet.slice(0,40)}${n.postSnippet.length>40?'…':''}"` : '';
-  if (n.type==='post_like')    return `${name} liked your post${snippet}`;
-  if (n.type==='comment_like') return `${name} liked your comment${snippet}`;
-  if (n.type==='new_comment')  return `${name} commented on your post${snippet}`;
+
+function notifLabel(n, html = true) {
+  const name = html
+    ? `<strong style="color:${n.fromColor||'var(--accent)'}">${esc(n.fromAlias)}</strong>`
+    : n.fromAlias;
+  const snippet = n.postSnippet
+    ? ` "${n.postSnippet.slice(0,40)}${n.postSnippet.length>40?'…':''}"`
+    : '';
+  if (n.type === 'post_like')    return `${name} liked your post${snippet}`;
+  if (n.type === 'comment_like') return `${name} liked your comment${snippet}`;
+  if (n.type === 'new_comment')  return `${name} commented on your post${snippet}`;
   return `${name} sent you a notification`;
 }
+
 function renderNotifsPanel() {
   const body = document.getElementById('notifs-body');
-  const all = [...cachedFriendReqs.map(r=>({...r,_kind:'friend'})), ...cachedActivityNotifs.map(n=>({...n,_kind:'activity'}))].sort((a,b)=>b.createdAt-a.createdAt);
-  if (all.length === 0) { body.innerHTML = '<div class="empty-list"><div class="empty-list-icon">🔔</div>no notifications yet</div>'; return; }
+  const all = [
+    ...cachedFriendReqs.map(r => ({...r, _kind:'friend'})),
+    ...cachedActivityNotifs.map(n => ({...n, _kind:'activity'}))
+  ].sort((a,b) => b.createdAt - a.createdAt);
+
+  if (all.length === 0) {
+    body.innerHTML = '<div class="empty-list"><div class="empty-list-icon">🔔</div>no notifications yet</div>';
+    return;
+  }
   body.innerHTML = all.map(item => {
     if (item._kind === 'friend') {
-      const r = item, unread = r.status==='pending' ? 'unread' : '';
-      let actions = r.status==='pending'
+      const r = item, unread = r.status === 'pending' ? 'unread' : '';
+      const actions = r.status === 'pending'
         ? `<div class="notif-actions"><button class="nact-btn accept" onclick="acceptReq('${r._id}')">Accept</button><button class="nact-btn decline" onclick="declineReq('${r._id}')">Decline</button></div>`
         : `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:var(--mono)">${r.status==='accepted'?'✓ accepted':'✗ declined'}</div>`;
       return `<div class="notif-card ${unread}"><div class="notif-top"><div class="notif-text"><span style="font-size:16px;margin-right:.3rem">${r.fromEmoji||'🦊'}</span><strong style="color:${r.fromColor||'var(--accent)'}">${esc(r.fromAlias)}</strong> wants to be friends</div><div class="notif-time">${fmtTime(r.createdAt)}</div></div>${actions}</div>`;
@@ -1377,6 +1529,7 @@ function renderNotifsPanel() {
   }).join('');
   client.mutation("posts:markNotificationsRead", { token: sessionToken }).catch(()=>{});
 }
+
 async function acceptReq(id) { try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: true }); } catch(e){} }
 async function declineReq(id){ try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: false }); } catch(e){} }
 
@@ -1409,31 +1562,46 @@ async function renderFriendsPanel() {
       <button class="icon-btn" title="Remove" onclick="removeFriend('${esc(f.username)}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>`).join('');
   }
-  const sentTo = new Set(sentReqs.map(r=>r.toUsername));
-  const friendSet = new Set(friends.map(f=>f.username));
+  const sentTo = new Set(sentReqs.map(r => r.toUsername));
+  const friendSet = new Set(friends.map(f => f.username));
   const discover = allUsers.filter(u => !friendSet.has(u.username) && !sentTo.has(u.username));
   if (sentReqs.length > 0) {
     html += `<div class="sec-label">Sent (${sentReqs.length})</div>`;
-    html += sentReqs.map(r => { const found=allUsers.find(u=>u.username===r.toUsername); return `<div class="friend-row" style="opacity:.6"><div class="friend-av">${found?.emoji??'🦊'}</div><div style="flex:1"><div class="friend-alias">${esc(found?.alias??r.toUsername)}</div></div><span class="badge-chip">pending</span></div>`; }).join('');
+    html += sentReqs.map(r => {
+      const found = allUsers.find(u => u.username === r.toUsername);
+      return `<div class="friend-row" style="opacity:.6"><div class="friend-av">${found?.emoji??'🦊'}</div><div style="flex:1"><div class="friend-alias">${esc(found?.alias??r.toUsername)}</div></div><span class="badge-chip">pending</span></div>`;
+    }).join('');
   }
   if (discover.length > 0) {
     html += `<div class="sec-label">Discover (${discover.length})</div>`;
-    html += discover.map(u=>`<div class="friend-row"><div class="friend-av" style="border:1.5px solid ${u.color}">${u.emoji}${u.isOnline?'<div class="friend-online"></div>':''}</div><div style="flex:1;min-width:0"><div class="friend-alias" style="color:${u.color}">${esc(u.alias)}</div><div class="friend-bio">${u.bio?esc(u.bio):''}</div></div><button class="btn btn-secondary" onclick="quickAdd('${esc(u.alias)}')" style="font-size:12px;padding:.3rem .65rem">+ Add</button></div>`).join('');
+    html += discover.map(u => `<div class="friend-row"><div class="friend-av" style="border:1.5px solid ${u.color}">${u.emoji}${u.isOnline?'<div class="friend-online"></div>':''}</div><div style="flex:1;min-width:0"><div class="friend-alias" style="color:${u.color}">${esc(u.alias)}</div><div class="friend-bio">${u.bio?esc(u.bio):''}</div></div><button class="btn btn-secondary" onclick="quickAdd('${esc(u.alias)}')" style="font-size:12px;padding:.3rem .65rem">+ Add</button></div>`).join('');
   }
   body.innerHTML = html;
 }
 async function addByAlias() {
   const input = document.getElementById('add-alias'), fb = document.getElementById('add-fb');
   const alias = input.value.trim(); if (!alias) { showFb(fb,'Enter an alias.',false); return; }
-  try { const res = await client.mutation("friends:sendRequest",{token:sessionToken,toAlias:alias}); showFb(fb,res.ok?(res.message||'Request sent!'):res.error,res.ok); if(res.ok){input.value='';renderFriendsPanel();} }
-  catch(e) { showFb(fb,'Error.',false); }
+  try {
+    const res = await client.mutation("friends:sendRequest", { token: sessionToken, toAlias: alias });
+    showFb(fb, res.ok ? (res.message||'Request sent!') : res.error, res.ok);
+    if (res.ok) { input.value = ''; renderFriendsPanel(); }
+  } catch(e) { showFb(fb,'Error.',false); }
 }
-async function quickAdd(alias) { try { await client.mutation("friends:sendRequest",{token:sessionToken,toAlias:alias}); renderFriendsPanel(); } catch(e){} }
+async function quickAdd(alias) {
+  try { await client.mutation("friends:sendRequest", { token: sessionToken, toAlias: alias }); renderFriendsPanel(); } catch(e){}
+}
 async function removeFriend(username) {
   if (!confirm('Remove this friend?')) return;
-  try { await client.mutation("friends:removeFriend",{token:sessionToken,friendUsername:username}); if(currentConv===username){currentConv=null;hide('chat-view');show('chat-placeholder');} renderFriendsPanel(); } catch(e){}
+  try {
+    await client.mutation("friends:removeFriend", { token: sessionToken, friendUsername: username });
+    if (currentConv === username) { currentConv = null; hide('chat-view'); show('chat-placeholder'); }
+    renderFriendsPanel();
+  } catch(e) {}
 }
-function showFb(el, msg, ok) { el.textContent=msg; el.style.color=ok?'var(--green)':'var(--red)'; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>{el.style.display='none';},3000); }
+function showFb(el, msg, ok) {
+  el.textContent = msg; el.style.color = ok ? 'var(--green)' : 'var(--red)'; el.style.display = 'block';
+  clearTimeout(el._t); el._t = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
 
 // ── PROFILE PANEL ──
 const COLORS = ['#5b7fff','#ff4d6a','#2ecc8a','#f5c518','#ff6b35','#b362ff','#00c2e0','#ff9f43','#e84393','#00d2d3','#1abc9c','#16a085','#27ae60','#2ecc71','#3498db','#2980b9','#9b59b6','#8e44ad','#e74c3c','#c0392b','#f39c12','#d35400','#f1c40f','#7f8c8d','#95a5a6','#34495e','#2c3e50','#ff7675','#fd79a8','#6c5ce7','#a29bfe','#00b894','#00cec9','#0984e3','#fdcb6e'];
@@ -1459,34 +1627,50 @@ function renderProfilePanel() {
       <button class="btn btn-secondary" onclick="doLogout()">Sign out</button>
     </div>`;
 }
-function selectColor(c) { editColor=c; document.querySelectorAll('.color-swatch').forEach(el=>el.classList.toggle('selected',el.dataset.color===c)); document.getElementById('profile-big-av').style.borderColor=c; }
-function selectEmoji(e) { editEmoji=e; document.querySelectorAll('.emoji-opt').forEach(el=>el.classList.toggle('selected',el.dataset.emoji===e)); document.getElementById('profile-big-av').textContent=e; }
+function selectColor(c) {
+  editColor = c;
+  document.querySelectorAll('.color-swatch').forEach(el => el.classList.toggle('selected', el.dataset.color === c));
+  document.getElementById('profile-big-av').style.borderColor = c;
+}
+function selectEmoji(e) {
+  editEmoji = e;
+  document.querySelectorAll('.emoji-opt').forEach(el => el.classList.toggle('selected', el.dataset.emoji === e));
+  document.getElementById('profile-big-av').textContent = e;
+}
 async function saveProfile() {
-  const alias=document.getElementById('pf-alias').value.trim(), bio=document.getElementById('pf-bio').value, fb=document.getElementById('pf-fb');
+  const alias = document.getElementById('pf-alias').value.trim();
+  const bio = document.getElementById('pf-bio').value;
+  const fb = document.getElementById('pf-fb');
   try {
-    const res=await client.mutation("auth:updateProfile",{token:sessionToken,alias:alias||undefined,bio,color:editColor,emoji:editEmoji});
-    if(!res.ok){showFb(fb,res.error,false);return;}
-    myAlias=res.alias||myAlias; myBio=bio; myColor=editColor; myEmoji=editEmoji;
-    document.documentElement.style.setProperty('--myColor',myColor);
-    document.getElementById('top-av').textContent=myEmoji; document.getElementById('top-av').style.borderColor=myColor;
-    document.getElementById('my-alias-chip').textContent=myAlias;
+    const res = await client.mutation("auth:updateProfile", { token: sessionToken, alias: alias||undefined, bio, color: editColor, emoji: editEmoji });
+    if (!res.ok) { showFb(fb, res.error, false); return; }
+    myAlias = res.alias || myAlias; myBio = bio; myColor = editColor; myEmoji = editEmoji;
+    document.documentElement.style.setProperty('--myColor', myColor);
+    document.getElementById('top-av').textContent = myEmoji;
+    document.getElementById('top-av').style.borderColor = myColor;
+    document.getElementById('my-alias-chip').textContent = myAlias;
     renderProfilePanel(); showToast('Profile updated ✓');
-  } catch(e){showFb(fb,'Error saving.',false);}
+  } catch(e) { showFb(fb, 'Error saving.', false); }
 }
 
 // ── PANELS ──
 function openPanel(which) {
   closeAllPanels(false);
   document.getElementById('overlay').classList.add('open');
-  if (which==='notifs')  { document.getElementById('notifs-panel').classList.add('open'); renderNotifsPanel(); }
-  if (which==='friends') { document.getElementById('friends-panel').classList.add('open'); renderFriendsPanel(); }
-  if (which==='profile') { document.getElementById('profile-panel').classList.add('open'); renderProfilePanel(); }
+  if (which === 'notifs')  { document.getElementById('notifs-panel').classList.add('open'); renderNotifsPanel(); }
+  if (which === 'friends') { document.getElementById('friends-panel').classList.add('open'); renderFriendsPanel(); }
+  if (which === 'profile') { document.getElementById('profile-panel').classList.add('open'); renderProfilePanel(); }
 }
-function closeAllPanels(closeOverlay=true) {
-  ['notifs-panel','friends-panel','profile-panel'].forEach(id=>document.getElementById(id).classList.remove('open'));
+function closeAllPanels(closeOverlay = true) {
+  ['notifs-panel','friends-panel','profile-panel'].forEach(id => document.getElementById(id).classList.remove('open'));
   if (closeOverlay) document.getElementById('overlay').classList.remove('open');
 }
-document.addEventListener('keydown', e => { if (e.key==='Escape') { closeAllPanels(); document.getElementById('user-popup-overlay').classList.remove('open'); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeAllPanels();
+    document.getElementById('user-popup-overlay').classList.remove('open');
+  }
+});
 
 // ── USER PROFILE POPUP ──
 async function showUserProfile(username) {
@@ -1497,8 +1681,7 @@ async function showUserProfile(username) {
 
   const aliasEl = document.getElementById('user-popup-alias');
   const avEl    = document.getElementById('user-popup-av');
-  aliasEl.textContent = '…';
-  aliasEl.style.color = 'var(--text)';
+  aliasEl.textContent = '…'; aliasEl.style.color = 'var(--text)';
   const ring = document.getElementById('user-popup-online-ring');
   while (avEl.firstChild !== ring) avEl.removeChild(avEl.firstChild);
   document.getElementById('user-popup-bio').textContent = '';
@@ -1510,7 +1693,6 @@ async function showUserProfile(username) {
   document.getElementById('user-popup-offline-label').style.display = 'none';
 
   try {
-    // Use one-time queries instead of subscriptions
     const [allUsers, friends, sentReqs, lbData] = await Promise.all([
       client.query("friends:getAllUsers", { token: sessionToken }),
       client.query("friends:getMyFriends", { token: sessionToken }),
@@ -1534,8 +1716,7 @@ async function showUserProfile(username) {
     avEl.insertAdjacentText('afterbegin', user.emoji);
     ring.classList.toggle('visible', !!user.isOnline);
 
-    aliasEl.textContent = user.alias;
-    aliasEl.style.color = user.color;
+    aliasEl.textContent = user.alias; aliasEl.style.color = user.color;
     const onlineLabel  = document.getElementById('user-popup-online-label');
     const offlineLabel = document.getElementById('user-popup-offline-label');
     if (user.isOnline) { onlineLabel.style.display = 'inline'; offlineLabel.style.display = 'none'; }
@@ -1566,7 +1747,6 @@ async function showUserProfile(username) {
     const addBtn = document.getElementById('user-popup-add-btn');
     const msgBtn = document.getElementById('user-popup-msg-btn');
     addBtn.style.display = 'block';
-
     if (popupFriendStatus === 'friends') {
       addBtn.textContent = '✓ friends'; addBtn.className = 'user-popup-add-btn friends'; addBtn.title = 'Click to remove friend';
       msgBtn.style.display = 'flex';
@@ -1623,7 +1803,7 @@ function handlePopupOpenChat() {
 }
 
 // ══════════════════════════════════════════════
-// ── HUB — polled, not live subscriptions ──
+// ── HUB — polled every 30s while visible ──
 // ══════════════════════════════════════════════
 
 function switchHubTab(tab) {
@@ -1637,8 +1817,9 @@ function switchHubTab(tab) {
 
 function startHubPolling() {
   stopHubPolling();
-  loadHub(); // immediate
-  hubInterval = setInterval(loadHub, 30000); // every 30s
+  loadHub();
+  // Leaderboard is very expensive — poll every 2 min. Others every 45s.
+  hubInterval = setInterval(loadHub, currentHubTab === 'leaderboard' ? 120000 : 45000);
 }
 function stopHubPolling() {
   if (hubInterval) { clearInterval(hubInterval); hubInterval = null; }
@@ -1695,8 +1876,12 @@ function renderLeaderboard(data) {
     const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
     const rowClass  = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
     const rankIcon  = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-    const meTag = u.username === myUsername ? `<span style="font-size:9px;font-family:var(--mono);color:var(--accent);background:var(--accentBg);border:1px solid var(--accent)33;border-radius:20px;padding:.1rem .4rem">you</span>` : '';
-    const rowClick = u.username === myUsername ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(u.username)}')"`;
+    const meTag = u.username === myUsername
+      ? `<span style="font-size:9px;font-family:var(--mono);color:var(--accent);background:var(--accentBg);border:1px solid var(--accent)33;border-radius:20px;padding:.1rem .4rem">you</span>`
+      : '';
+    const rowClick = u.username === myUsername
+      ? `onclick="openPanel('profile')"`
+      : `onclick="showUserProfile('${esc(u.username)}')"`;
     html += `<div class="lb-row ${rowClass}" style="cursor:pointer" ${rowClick}>
       <div class="lb-rank ${rankClass}">${rankIcon}</div>
       <div class="lb-av" style="border-color:${u.color}">${u.emoji}</div>
@@ -1715,7 +1900,9 @@ function renderLeaderboard(data) {
   if (me && me.badges.length > 0) {
     html += `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:.75rem 0 .25rem">Your Badges</div>`;
     html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem">`;
-    html += me.badges.map(b => `<div style="display:flex;align-items:center;gap:.5rem;background:var(--bg2);border:1px solid ${b.color}33;border-radius:var(--r);padding:.5rem .75rem"><span style="font-size:20px">${b.icon}</span><div><div style="font-size:12px;font-weight:700;color:${b.color}">${esc(b.label)}</div>${b.desc?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${esc(b.desc)}</div>`:''}</div></div>`).join('');
+    html += me.badges.map(b =>
+      `<div style="display:flex;align-items:center;gap:.5rem;background:var(--bg2);border:1px solid ${b.color}33;border-radius:var(--r);padding:.5rem .75rem"><span style="font-size:20px">${b.icon}</span><div><div style="font-size:12px;font-weight:700;color:${b.color}">${esc(b.label)}</div>${b.desc?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${esc(b.desc)}</div>`:''}</div></div>`
+    ).join('');
     html += `</div>`;
   }
   scroll.innerHTML = html;
@@ -1747,7 +1934,9 @@ function renderChangelog(entries) {
     html += entries.map(e => {
       const tagClass = `cl-tag-${e.tag}`;
       const tagLabel = { feature: '✨ Feature', fix: '🐛 Fix', improvement: '🔧 Improvement', upcoming: '🔮 Upcoming' }[e.tag] || e.tag;
-      const delBtn = isAdmin ? `<button class="icon-btn" onclick="deleteChangelog('${e._id}')" title="Delete" style="color:var(--text3);margin-left:auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>` : '';
+      const delBtn = isAdmin
+        ? `<button class="icon-btn" onclick="deleteChangelog('${e._id}')" title="Delete" style="color:var(--text3);margin-left:auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
+        : '';
       return `<div class="cl-entry">
         <div class="cl-header"><span class="cl-tag-chip ${tagClass}">${tagLabel}</span><div class="cl-title">${esc(e.title)}</div>${e.version ? `<span class="cl-version">${esc(e.version)}</span>` : ''}${delBtn}</div>
         <div class="cl-body">${esc(e.body)}</div>
@@ -1843,13 +2032,16 @@ async function submitPoll() {
 }
 
 async function voteOnPoll(pollId, optionIndex) {
-  try { await client.mutation("hub:votePoll", { token: sessionToken, pollId, optionIndex }); loadHub(); } catch(e) { showToast('Error voting'); }
+  try { await client.mutation("hub:votePoll", { token: sessionToken, pollId, optionIndex }); loadHub(); }
+  catch(e) { showToast('Error voting'); }
 }
 async function closePoll(pollId) {
-  try { await client.mutation("hub:closePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){} }
+  try { await client.mutation("hub:closePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){}
+}
 async function deletePoll(pollId) {
   if (!confirm('Delete this poll?')) return;
-  try { await client.mutation("hub:deletePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){} }
+  try { await client.mutation("hub:deletePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){}
+}
 
 // ── IDEAS ──
 function renderIdeas(ideas) {
@@ -1911,10 +2103,12 @@ async function submitIdea() {
 
 async function deleteIdea(ideaId) {
   if (!confirm('Delete this idea?')) return;
-  try { await client.mutation("hub:deleteIdea", { token: sessionToken, ideaId }); loadHub(); } catch(e){} }
+  try { await client.mutation("hub:deleteIdea", { token: sessionToken, ideaId }); loadHub(); } catch(e){}
+}
 
 async function voteOnIdea(ideaId) {
-  try { await client.mutation("hub:voteIdea", { token: sessionToken, ideaId }); loadHub(); } catch(e) { showToast('Error voting'); }
+  try { await client.mutation("hub:voteIdea", { token: sessionToken, ideaId }); loadHub(); }
+  catch(e) { showToast('Error voting'); }
 }
 </script>
 </body>
