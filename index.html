@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Netbound</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
 <style>
 :root {
   --bg:       #080a0f;
@@ -291,55 +290,18 @@ input, textarea { font-family: var(--sans); }
 .compose-type-btn { display: flex; align-items: center; gap: .35rem; padding: .3rem .7rem; border-radius: 20px; background: transparent; border: 1px solid var(--border); color: var(--text3); font-size: 11px; font-weight: 600; font-family: var(--mono); cursor: pointer; transition: all .12s; }
 .compose-type-btn:hover { border-color: var(--border2); color: var(--text); }
 .compose-type-btn.active { background: var(--accentBg); border-color: var(--accent); color: var(--accent); }
-.compose-media-pick-btn { display: flex; align-items: center; gap: .4rem; padding: .45rem .85rem; border-radius: 8px; background: var(--bg3); border: 1px dashed var(--border2); color: var(--text2); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all .12s; align-self: flex-start; }
+.compose-media-pick-btn { display: flex; align-items: center; gap: .4rem; padding: .45rem .85rem; border-radius: 8px; background: var(--bg3); border: 1px dashed var(--border2); color: var(--text2); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all .12px; align-self: flex-start; }
 .compose-media-pick-btn:hover { border-color: var(--accent); color: var(--accent); }
 .compose-url-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .45rem .75rem; color: var(--text); font-size: 12px; outline: none; font-family: var(--mono); }
 .compose-url-input:focus { border-color: var(--accent); }
 .compose-url-input::placeholder { color: var(--text3); }
 
 /* ── POST MEDIA ── */
-.post-media {
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  padding: 0 0 0.7rem 0;
-  width: 100%;
-}
-.post-img {
-  width: 70%;
-  max-width: 350px;
-  aspect-ratio: 16 / 9;
-  object-fit: contain;
-  border-radius: 8px;
-  border: 1px solid var(--border2);
-  display: block;
-  background: #000;
-}
-.post-video {
-  width: 70%;
-  max-width: 350px;
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-  border: 1px solid var(--border2);
-  background: black;
-  display: block;
-}
-.post-yt-wrap {
-  width: 70%;
-  max-width: 350px;
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-  border: 1px solid var(--border2);
-  overflow: hidden;
-  background: black;
-  display: block;
-}
-.post-yt {
-  width: 100%;
-  height: 100%;
-  border: none;
-  display: block;
-}
+.post-media { display: flex; justify-content: flex-start; align-items: flex-start; padding: 0 0 0.7rem 0; width: 100%; }
+.post-img { width: 70%; max-width: 350px; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 8px; border: 1px solid var(--border2); display: block; background: #000; }
+.post-video { width: 70%; max-width: 350px; aspect-ratio: 16 / 9; border-radius: 8px; border: 1px solid var(--border2); background: black; display: block; }
+.post-yt-wrap { width: 70%; max-width: 350px; aspect-ratio: 16 / 9; border-radius: 8px; border: 1px solid var(--border2); overflow: hidden; background: black; display: block; }
+.post-yt { width: 100%; height: 100%; border: none; display: block; }
 
 /* ── STATUS BAR ── */
 .statusbar { height: 24px; background: var(--bg); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 1rem; gap: .5rem; font-size: 10px; color: var(--text3); font-family: var(--mono); flex-shrink: 0; }
@@ -517,9 +479,7 @@ input, textarea { font-family: var(--sans); }
   animation: popIn .15s cubic-bezier(.4,0,.2,1);
 }
 @keyframes popIn { from { transform: scale(.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.user-popup-banner {
-  height: 68px;
-}
+.user-popup-banner { height: 68px; }
 .user-popup-avatar-row {
   display: flex; align-items: flex-end; justify-content: space-between;
   padding: 0 1.1rem; margin-top: -30px; margin-bottom: .75rem;
@@ -532,8 +492,7 @@ input, textarea { font-family: var(--sans); }
 }
 .user-popup-online-ring {
   position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px;
-  border-radius: 50%; background: var(--green); border: 2.5px solid var(--bg2);
-  display: none;
+  border-radius: 50%; background: var(--green); border: 2.5px solid var(--bg2); display: none;
 }
 .user-popup-online-ring.visible { display: block; }
 .user-popup-action-row { display: flex; gap: .4rem; align-items: center; }
@@ -544,14 +503,9 @@ input, textarea { font-family: var(--sans); }
   transition: all .15s; letter-spacing: .04em; white-space: nowrap;
 }
 .user-popup-add-btn:hover { background: var(--accent2); }
-.user-popup-add-btn.friends {
-  background: transparent; color: var(--green); border: 1px solid rgba(46,204,138,.35);
-}
+.user-popup-add-btn.friends { background: transparent; color: var(--green); border: 1px solid rgba(46,204,138,.35); }
 .user-popup-add-btn.friends:hover { background: rgba(255,77,106,.08); color: var(--red); border-color: rgba(255,77,106,.3); }
-.user-popup-add-btn.pending {
-  background: transparent; color: var(--text3); border: 1px solid var(--border);
-  cursor: default; opacity: .7;
-}
+.user-popup-add-btn.pending { background: transparent; color: var(--text3); border: 1px solid var(--border); cursor: default; opacity: .7; }
 .user-popup-msg-btn {
   background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
   border-radius: 8px; padding: .4rem .75rem; font-size: 11px;
@@ -826,6 +780,25 @@ import { ConvexClient } from "convex/browser";
 
 const CONVEX_URL = "https://cheerful-sturgeon-267.convex.cloud";
 
+// ══════════════════════════════════════════════════════════════
+// BANDWIDTH OPTIMIZATION STRATEGY:
+//
+// LIVE subscriptions (onUpdate) — only for things that MUST be instant:
+//   • getMessages        — active chat only
+//   • getConversationPreviews — DM sidebar (throttled update)
+//   • getUnreadCount     — unread badge
+//   • getInboxRequests   — friend requests
+//   • getNotifications   — activity notifications
+//
+// POLLED every N seconds — everything else:
+//   • getTotalUserCount  — every 5 minutes (was ~5K calls!)
+//   • getFeed/getTrending — every 30 seconds
+//   • getLeaderboard     — every 60 seconds
+//   • getChangelog       — every 60 seconds
+//   • getPolls           — every 30 seconds
+//   • getIdeas           — every 30 seconds
+// ══════════════════════════════════════════════════════════════
+
 // ── STATE ──
 let client;
 let myUsername = null, myAlias = null, myEmoji = "🦊", myColor = "#5b7fff", myBio = "";
@@ -833,21 +806,28 @@ let sessionToken = null;
 let currentConv = null;
 let convListData = [];
 let isAdmin = false;
-let messageUnsub = null, convUnsub = null, notifUnsub = null, activityNotifUnsub = null, unreadMsgUnsub = null;
-let lbUnsub = null, changelogUnsub = null, pollsUnsub = null, ideasUnsub = null;
+
+// Live subscription unsubs
+let messageUnsub = null, convUnsub = null, notifUnsub = null;
+let activityNotifUnsub = null, unreadMsgUnsub = null;
+
+// Poll intervals
+let userCountInterval = null;
+let feedInterval = null;
+let hubInterval = null;
+let heartbeatInterval = null;
+
 let prevUnreadMsgCount = 0;
 let prevActivityNotifCount = 0;
-let heartbeatInterval = null;
 let currentFeedTab = 'new';
 let currentHubTab = 'leaderboard';
-let feedUnsub = null;
 let openCommentPostId = null;
 let composeMediaType = 'text';
 let composeImageData = null;
 
-// ── USER POPUP STATE ──
+// User popup state
 let popupTargetUsername = null;
-let popupFriendStatus = null; // 'none' | 'pending' | 'friends'
+let popupFriendStatus = null;
 
 // ── UTILS ──
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -984,33 +964,46 @@ async function bootApp() {
   document.getElementById('my-alias-chip').textContent = myAlias;
   show('app-screen');
   try { isAdmin = await client.query("hub:getIsAdmin", { token: sessionToken }); } catch(e){}
+
+  // Live subscriptions (only truly real-time needs)
   subscribeConvList();
   subscribeNotifs();
   subscribeActivityNotifs();
   subscribeUnreadMsgs();
-  subscribeUserCount();
-  startHeartbeat();
-  loadFeed();
+
+  // Polled data (not real-time)
+  startUserCountPolling();   // every 5 min
+  startHeartbeat();          // every 60s
 }
 
 function teardown() {
-  [messageUnsub, convUnsub, notifUnsub, activityNotifUnsub, unreadMsgUnsub, feedUnsub, lbUnsub, changelogUnsub, pollsUnsub, ideasUnsub].forEach(u => u && u());
-  if (heartbeatInterval) clearInterval(heartbeatInterval);
-  messageUnsub = convUnsub = notifUnsub = activityNotifUnsub = unreadMsgUnsub = feedUnsub = lbUnsub = changelogUnsub = pollsUnsub = ideasUnsub = heartbeatInterval = null;
+  [messageUnsub, convUnsub, notifUnsub, activityNotifUnsub, unreadMsgUnsub].forEach(u => u && u());
+  [userCountInterval, feedInterval, hubInterval, heartbeatInterval].forEach(i => i && clearInterval(i));
+  messageUnsub = convUnsub = notifUnsub = activityNotifUnsub = unreadMsgUnsub = null;
+  userCountInterval = feedInterval = hubInterval = heartbeatInterval = null;
 }
 
+// ── HEARTBEAT ──
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
+  // Fire immediately, then every 60s
+  client.mutation("auth:heartbeat", { token: sessionToken }).catch(()=>{});
   heartbeatInterval = setInterval(async () => {
     try { await client.mutation("auth:heartbeat", { token: sessionToken }); } catch(e){}
   }, 60000);
-  client.mutation("auth:heartbeat", { token: sessionToken }).catch(()=>{});
 }
 
-function subscribeUserCount() {
-  client.onUpdate("auth:getTotalUserCount", {}, (count) => {
-    if (count !== undefined) document.getElementById('user-count-num').textContent = count;
-  });
+// ── USER COUNT — polled every 5 minutes ──
+function startUserCountPolling() {
+  if (userCountInterval) clearInterval(userCountInterval);
+  async function fetchCount() {
+    try {
+      const count = await client.query("auth:getTotalUserCount", {});
+      if (count !== undefined) document.getElementById('user-count-num').textContent = count;
+    } catch(e) {}
+  }
+  fetchCount(); // immediate first load
+  userCountInterval = setInterval(fetchCount, 5 * 60 * 1000); // every 5 min
 }
 
 // ── MAIN TAB SWITCHING ──
@@ -1019,26 +1012,37 @@ function switchMainTab(tab) {
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
     document.getElementById(`${t}-view`).classList.toggle('active', t === tab);
   });
-  if (tab === 'feed') loadFeed();
-  if (tab === 'hub')  loadHub();
+  if (tab === 'feed') startFeedPolling();
+  else stopFeedPolling();
+
+  if (tab === 'hub') startHubPolling();
+  else stopHubPolling();
 }
 
-// ── FEED ──
+// ── FEED POLLING — only while feed tab is visible ──
+function startFeedPolling() {
+  stopFeedPolling();
+  loadFeedOnce(); // immediate
+  feedInterval = setInterval(loadFeedOnce, 30000); // every 30s
+}
+function stopFeedPolling() {
+  if (feedInterval) { clearInterval(feedInterval); feedInterval = null; }
+}
+
 function switchFeedTab(tab) {
   currentFeedTab = tab;
   document.querySelectorAll('.feed-tab-btn').forEach((b, i) => {
     b.classList.toggle('active', (i===0 && tab==='new') || (i===1 && tab==='trending'));
   });
-  loadFeed();
+  loadFeedOnce();
 }
 
-function loadFeed() {
-  if (feedUnsub) { feedUnsub(); feedUnsub = null; }
+async function loadFeedOnce() {
   const endpoint = currentFeedTab === 'trending' ? "posts:getTrending" : "posts:getFeed";
-  feedUnsub = client.onUpdate(endpoint, { token: sessionToken }, (posts) => {
-    if (!posts) return;
-    renderFeed(posts);
-  });
+  try {
+    const posts = await client.query(endpoint, { token: sessionToken });
+    if (posts) renderFeed(posts);
+  } catch(e) {}
 }
 
 function renderFeed(posts) {
@@ -1060,7 +1064,6 @@ function renderPostCard(p) {
     if (ytMatch) mediaHtml = `<div class="post-media"><div class="post-yt-wrap"><iframe src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen class="post-yt"></iframe></div></div>`;
     else mediaHtml = `<div class="post-media"><video src="${esc(p.mediaUrl)}" controls class="post-video" preload="metadata"></video></div>`;
   }
-  // Avatar and alias are clickable to open profile popup (unless it's your own post → opens your profile panel)
   const avClick = p.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(p.authorUsername)}')"`;
   return `<div class="post-card" id="post-${p._id}">
     <div class="post-header">
@@ -1097,8 +1100,16 @@ function renderPostCard(p) {
   </div>`;
 }
 
-async function reactToPost(postId, reaction) { try { await client.mutation("posts:reactToPost", { token: sessionToken, postId, reaction }); } catch(e){} }
-async function deletePost(postId) { if (!confirm('Delete this post?')) return; try { await client.mutation("posts:deletePost", { token: sessionToken, postId }); } catch(e){} }
+async function reactToPost(postId, reaction) {
+  try {
+    await client.mutation("posts:reactToPost", { token: sessionToken, postId, reaction });
+    loadFeedOnce(); // refresh feed after reaction
+  } catch(e) {}
+}
+async function deletePost(postId) {
+  if (!confirm('Delete this post?')) return;
+  try { await client.mutation("posts:deletePost", { token: sessionToken, postId }); loadFeedOnce(); } catch(e) {}
+}
 
 function toggleComments(postId) {
   const section = document.getElementById(`comments-${postId}`);
@@ -1122,7 +1133,6 @@ function renderComments(postId, comments) {
   listEl.innerHTML = comments.map(c => {
     const likedClass = c.myReaction === 'like' ? 'liked' : '';
     const deleteBtn = (c.isMe || isAdmin) ? `<button class="comment-react" onclick="deleteComment('${c._id}','${postId}')" style="color:var(--red)">✕</button>` : '';
-    // Avatar and alias clickable — own comment opens profile panel, others open popup
     const avClick = c.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(c.authorUsername)}')"`;
     return `<div class="comment-row">
       <div class="comment-av" style="border-color:${c.color};cursor:pointer" ${avClick}>${c.emoji}</div>
@@ -1143,10 +1153,10 @@ async function submitComment(postId) {
   const input = document.getElementById(`comment-input-${postId}`);
   const text = input.value.trim(); if (!text) return;
   input.value = '';
-  try { await client.mutation("posts:addComment", { token: sessionToken, postId, text }); await loadComments(postId); } catch(e) {}
+  try { await client.mutation("posts:addComment", { token: sessionToken, postId, text }); await loadComments(postId); loadFeedOnce(); } catch(e) {}
 }
 async function deleteComment(commentId, postId) {
-  try { await client.mutation("posts:deleteComment", { token: sessionToken, commentId }); await loadComments(postId); } catch(e){}
+  try { await client.mutation("posts:deleteComment", { token: sessionToken, commentId }); await loadComments(postId); loadFeedOnce(); } catch(e){}
 }
 async function reactToComment(commentId, postId, reaction) {
   try { await client.mutation("posts:reactToComment", { token: sessionToken, commentId, reaction }); await loadComments(postId); } catch(e){}
@@ -1191,11 +1201,12 @@ async function submitPost() {
     document.getElementById('compose-input').value = '';
     document.getElementById('compose-count').textContent = '0 / 500';
     composeImageData = null; setComposeMedia('text');
+    loadFeedOnce(); // refresh after posting
   } catch(e) { showToast('Failed to post'); }
   finally { btn.disabled = false; btn.textContent = 'Post'; }
 }
 
-// ── CONV LIST ──
+// ── CONV LIST — live subscription (needed for real-time DMs) ──
 function subscribeConvList() {
   if (convUnsub) convUnsub();
   convUnsub = client.onUpdate("messages:getConversationPreviews", { token: sessionToken }, (data) => {
@@ -1214,7 +1225,6 @@ function renderConvList(filter = '') {
     const ts = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
     const unreadHtml = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
     const onlineDotHtml = `<div class="online-dot ${c.isOnline ? 'visible' : ''}"></div>`;
-    // DM conv items always open the chat, never the profile popup
     return `<div class="conv-item ${active}" onclick="openConv('${esc(c.username)}','${esc(c.alias)}','${esc(c.emoji)}','${esc(c.color)}')">
       <div class="conv-av-wrap">
         <div class="conv-av" style="border-color:${c.color}">${c.emoji}</div>
@@ -1233,7 +1243,7 @@ function renderConvList(filter = '') {
 }
 function filterConvs() { renderConvList(document.getElementById('conv-search').value); }
 
-// ── MESSAGES ──
+// ── MESSAGES — live subscription for active chat only ──
 function openConv(username, alias, emoji, color) {
   if (!alias) { const f = convListData.find(c=>c.username===username); alias=f?.alias??username; emoji=f?.emoji??"🦊"; color=f?.color??"#5b7fff"; }
   currentConv = username; closeAllPanels(); renderConvList();
@@ -1298,7 +1308,7 @@ async function sendMsg() {
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
-// ── UNREAD ──
+// ── UNREAD — live subscription ──
 function subscribeUnreadMsgs() {
   if (unreadMsgUnsub) unreadMsgUnsub();
   unreadMsgUnsub = client.onUpdate("messages:getUnreadCount", { token: sessionToken }, (count) => {
@@ -1313,7 +1323,7 @@ function subscribeUnreadMsgs() {
   });
 }
 
-// ── NOTIFS ──
+// ── NOTIFS — live subscriptions ──
 let cachedFriendReqs = [], cachedActivityNotifs = [];
 function updateNotifBadge() {
   const total = cachedFriendReqs.filter(r=>r.status==='pending').length + cachedActivityNotifs.filter(n=>!n.read).length;
@@ -1478,24 +1488,17 @@ function closeAllPanels(closeOverlay=true) {
 }
 document.addEventListener('keydown', e => { if (e.key==='Escape') { closeAllPanels(); document.getElementById('user-popup-overlay').classList.remove('open'); } });
 
-// ══════════════════════════════════════════════
 // ── USER PROFILE POPUP ──
-// ══════════════════════════════════════════════
-
 async function showUserProfile(username) {
-  // If clicking your own profile, open the profile panel instead
   if (username === myUsername) { openPanel('profile'); return; }
-
   popupTargetUsername = username;
   const overlay = document.getElementById('user-popup-overlay');
   overlay.classList.add('open');
 
-  // Reset to loading state
   const aliasEl = document.getElementById('user-popup-alias');
   const avEl    = document.getElementById('user-popup-av');
   aliasEl.textContent = '…';
   aliasEl.style.color = 'var(--text)';
-  // Clear emoji text node (first child before the ring div)
   const ring = document.getElementById('user-popup-online-ring');
   while (avEl.firstChild !== ring) avEl.removeChild(avEl.firstChild);
   document.getElementById('user-popup-bio').textContent = '';
@@ -1507,6 +1510,7 @@ async function showUserProfile(username) {
   document.getElementById('user-popup-offline-label').style.display = 'none';
 
   try {
+    // Use one-time queries instead of subscriptions
     const [allUsers, friends, sentReqs, lbData] = await Promise.all([
       client.query("friends:getAllUsers", { token: sessionToken }),
       client.query("friends:getMyFriends", { token: sessionToken }),
@@ -1514,7 +1518,6 @@ async function showUserProfile(username) {
       client.query("hub:getLeaderboard", { token: sessionToken }),
     ]);
 
-    // If popup was closed while loading, bail out
     if (!overlay.classList.contains('open') || popupTargetUsername !== username) return;
 
     const user = allUsers.find(u => u.username === username);
@@ -1524,88 +1527,58 @@ async function showUserProfile(username) {
     const isPending = sentReqs.some(r => r.toUsername === username);
     popupFriendStatus = isFriend ? 'friends' : isPending ? 'pending' : 'none';
 
-    // Banner gradient using user color
     document.getElementById('user-popup-banner').style.cssText =
       `height:68px;background:linear-gradient(135deg,${user.color}55 0%,${user.color}11 60%,transparent 100%);border-bottom:1px solid ${user.color}33`;
 
-    // Avatar
     avEl.style.borderColor = user.color;
     avEl.insertAdjacentText('afterbegin', user.emoji);
-
-    // Online ring
     ring.classList.toggle('visible', !!user.isOnline);
 
-    // Name + online status
     aliasEl.textContent = user.alias;
     aliasEl.style.color = user.color;
     const onlineLabel  = document.getElementById('user-popup-online-label');
     const offlineLabel = document.getElementById('user-popup-offline-label');
-    if (user.isOnline) {
-      onlineLabel.style.display = 'inline';
-      offlineLabel.style.display = 'none';
-    } else {
-      onlineLabel.style.display = 'none';
-      offlineLabel.style.display = 'inline';
-    }
+    if (user.isOnline) { onlineLabel.style.display = 'inline'; offlineLabel.style.display = 'none'; }
+    else { onlineLabel.style.display = 'none'; offlineLabel.style.display = 'inline'; }
 
-    // Bio
     document.getElementById('user-popup-bio').textContent = user.bio || 'No bio yet.';
 
-    // Meta row — join date + stats from leaderboard
-    const lbUser   = lbData?.users?.find(u => u.username === username);
-    const metaEl   = document.getElementById('user-popup-meta');
-    const parts    = [];
+    const lbUser = lbData?.users?.find(u => u.username === username);
+    const metaEl = document.getElementById('user-popup-meta');
+    const parts  = [];
     if (lbUser?.accountAgeDays != null) {
       const joinDate = new Date(Date.now() - lbUser.accountAgeDays * 86400000);
       parts.push(`📅 Joined ${joinDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`);
     }
-    if (lbUser) {
-      parts.push(`📝 ${lbUser.totalPosts} posts`);
-      parts.push(`👍 ${lbUser.totalPostLikes} likes`);
-    }
+    if (lbUser) { parts.push(`📝 ${lbUser.totalPosts} posts`); parts.push(`👍 ${lbUser.totalPostLikes} likes`); }
     metaEl.innerHTML = parts.map((p, i) =>
       i === 0 ? `<span class="user-popup-stat">${p}</span>`
               : `<span class="user-popup-dot"></span><span class="user-popup-stat">${p}</span>`
     ).join('');
 
-    // Badges
     const badgesEl = document.getElementById('user-popup-badges');
     if (lbUser?.badges?.length) {
       badgesEl.innerHTML = lbUser.badges.map(b =>
         `<span class="user-popup-badge" style="color:${b.color};border-color:${b.color}33;background:${b.color}11" title="${esc(b.desc)}">${b.icon} ${esc(b.label)}</span>`
       ).join('');
-    } else {
-      badgesEl.innerHTML = '';
-    }
+    } else { badgesEl.innerHTML = ''; }
 
-    // Add / Friends button
     const addBtn = document.getElementById('user-popup-add-btn');
     const msgBtn = document.getElementById('user-popup-msg-btn');
     addBtn.style.display = 'block';
 
     if (popupFriendStatus === 'friends') {
-      addBtn.textContent = '✓ friends';
-      addBtn.className = 'user-popup-add-btn friends';
-      addBtn.title = 'Click to remove friend';
+      addBtn.textContent = '✓ friends'; addBtn.className = 'user-popup-add-btn friends'; addBtn.title = 'Click to remove friend';
       msgBtn.style.display = 'flex';
     } else if (popupFriendStatus === 'pending') {
-      addBtn.textContent = '⏳ pending';
-      addBtn.className = 'user-popup-add-btn pending';
-      msgBtn.style.display = 'none';
+      addBtn.textContent = '⏳ pending'; addBtn.className = 'user-popup-add-btn pending'; msgBtn.style.display = 'none';
     } else {
-      addBtn.textContent = '+ add friend';
-      addBtn.className = 'user-popup-add-btn';
-      msgBtn.style.display = 'none';
+      addBtn.textContent = '+ add friend'; addBtn.className = 'user-popup-add-btn'; msgBtn.style.display = 'none';
     }
-
-  } catch(e) {
-    console.error('showUserProfile error:', e);
-    overlay.classList.remove('open');
-  }
+  } catch(e) { console.error('showUserProfile error:', e); overlay.classList.remove('open'); }
 }
 
 function closeUserPopup(e) {
-  // Only close when clicking the backdrop, not the card itself
   if (e && e.target !== document.getElementById('user-popup-overlay')) return;
   document.getElementById('user-popup-overlay').classList.remove('open');
   popupTargetUsername = null;
@@ -1613,7 +1586,6 @@ function closeUserPopup(e) {
 
 async function handlePopupAddFriend() {
   if (!popupTargetUsername) return;
-
   if (popupFriendStatus === 'friends') {
     if (!confirm('Remove this friend?')) return;
     try {
@@ -1621,25 +1593,19 @@ async function handlePopupAddFriend() {
       if (currentConv === popupTargetUsername) { currentConv = null; hide('chat-view'); show('chat-placeholder'); }
       popupFriendStatus = 'none';
       const addBtn = document.getElementById('user-popup-add-btn');
-      addBtn.textContent = '+ add friend';
-      addBtn.className = 'user-popup-add-btn';
+      addBtn.textContent = '+ add friend'; addBtn.className = 'user-popup-add-btn';
       document.getElementById('user-popup-msg-btn').style.display = 'none';
       showToast('Friend removed');
     } catch(e) { showToast('Error removing friend'); }
-
   } else if (popupFriendStatus === 'none') {
     try {
       const alias = document.getElementById('user-popup-alias').textContent;
       const res = await client.mutation("friends:sendRequest", { token: sessionToken, toAlias: alias });
       if (res.ok) {
-        showToast(res.message || 'Friend request sent!');
-        popupFriendStatus = 'pending';
+        showToast(res.message || 'Friend request sent!'); popupFriendStatus = 'pending';
         const addBtn = document.getElementById('user-popup-add-btn');
-        addBtn.textContent = '⏳ pending';
-        addBtn.className = 'user-popup-add-btn pending';
-      } else {
-        showToast(res.error || 'Error sending request');
-      }
+        addBtn.textContent = '⏳ pending'; addBtn.className = 'user-popup-add-btn pending';
+      } else { showToast(res.error || 'Error sending request'); }
     } catch(e) { showToast('Error sending request'); }
   }
 }
@@ -1657,7 +1623,7 @@ function handlePopupOpenChat() {
 }
 
 // ══════════════════════════════════════════════
-// ── HUB ──
+// ── HUB — polled, not live subscriptions ──
 // ══════════════════════════════════════════════
 
 function switchHubTab(tab) {
@@ -1669,35 +1635,33 @@ function switchHubTab(tab) {
   loadHub();
 }
 
-function loadHub() {
-  if (lbUnsub)        { lbUnsub(); lbUnsub = null; }
-  if (changelogUnsub) { changelogUnsub(); changelogUnsub = null; }
-  if (pollsUnsub)     { pollsUnsub(); pollsUnsub = null; }
-  if (ideasUnsub)     { ideasUnsub(); ideasUnsub = null; }
+function startHubPolling() {
+  stopHubPolling();
+  loadHub(); // immediate
+  hubInterval = setInterval(loadHub, 30000); // every 30s
+}
+function stopHubPolling() {
+  if (hubInterval) { clearInterval(hubInterval); hubInterval = null; }
+}
 
+async function loadHub() {
   const scroll = document.getElementById('hub-scroll');
-  scroll.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">loading…</div>';
-
-  if (currentHubTab === 'leaderboard') {
-    lbUnsub = client.onUpdate("hub:getLeaderboard", { token: sessionToken }, (data) => {
-      if (!data) return;
-      renderLeaderboard(data);
-    });
-  } else if (currentHubTab === 'updates') {
-    changelogUnsub = client.onUpdate("hub:getChangelog", { token: sessionToken }, (entries) => {
-      if (!entries) return;
-      renderChangelog(entries);
-    });
-  } else if (currentHubTab === 'polls') {
-    pollsUnsub = client.onUpdate("hub:getPolls", { token: sessionToken }, (polls) => {
-      if (!polls) return;
-      renderPolls(polls);
-    });
-  } else if (currentHubTab === 'ideas') {
-    ideasUnsub = client.onUpdate("hub:getIdeas", { token: sessionToken }, (ideas) => {
-      if (!ideas) return;
-      renderIdeas(ideas);
-    });
+  try {
+    if (currentHubTab === 'leaderboard') {
+      const data = await client.query("hub:getLeaderboard", { token: sessionToken });
+      if (data) renderLeaderboard(data);
+    } else if (currentHubTab === 'updates') {
+      const entries = await client.query("hub:getChangelog", { token: sessionToken });
+      if (entries) renderChangelog(entries);
+    } else if (currentHubTab === 'polls') {
+      const polls = await client.query("hub:getPolls", { token: sessionToken });
+      if (polls) renderPolls(polls);
+    } else if (currentHubTab === 'ideas') {
+      const ideas = await client.query("hub:getIdeas", { token: sessionToken });
+      if (ideas) renderIdeas(ideas);
+    }
+  } catch(e) {
+    scroll.innerHTML = '<div class="hub-empty">error loading — will retry</div>';
   }
 }
 
@@ -1713,206 +1677,50 @@ function renderBadges(badges, max = 3) {
 function renderLeaderboard(data) {
   const { users, topPost } = data;
   const scroll = document.getElementById('hub-scroll');
-
   let html = '';
-
   if (topPost && topPost.likeCount > 0) {
     const snippet = (topPost.text || '[media post]').slice(0, 100);
-
-    html += `
-      <div class="lb-top-post">
-        <div class="lb-top-post-label">👑 Most Liked Post Ever</div>
-
-        <div class="lb-top-post-text">
-          "${esc(snippet)}${snippet.length >= 100 ? '…' : ''}"
-        </div>
-
-        <div class="lb-top-post-meta">
-          ${topPost.emoji}
-          <strong style="color:${topPost.color}">
-            ${esc(topPost.alias)}
-          </strong>
-          · ${topPost.likeCount} 👍
-          · ${fmtDate(topPost.createdAt)}
-        </div>
-      </div>
-    `;
+    html += `<div class="lb-top-post">
+      <div class="lb-top-post-label">👑 Most Liked Post Ever</div>
+      <div class="lb-top-post-text">"${esc(snippet)}${snippet.length >= 100 ? '…' : ''}"</div>
+      <div class="lb-top-post-meta">${topPost.emoji} <strong style="color:${topPost.color}">${esc(topPost.alias)}</strong> · ${topPost.likeCount} 👍 · ${fmtDate(topPost.createdAt)}</div>
+    </div>`;
   }
-
-  html += `
-    <div style="
-      font-size:10px;
-      font-family:var(--mono);
-      color:var(--text3);
-      text-transform:uppercase;
-      letter-spacing:.12em;
-      padding:.25rem 0
-    ">
-      Ranked by Post Likes
-    </div>
-  `;
-
+  html += `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:.25rem 0">Ranked by Post Likes</div>`;
   html += `<div class="lb-table">`;
-
   users.forEach((u, i) => {
-
-    // ── OWNER BADGE ──
-    if (u.username === "michael-volpe") {
-      u.badges.unshift({
-        icon: "🛠️",
-        label: "OWNER",
-        color: "#f5c518"
-      });
-    // --- TESTER BADGE (for testing) ---
-    }
-    if (u.username === "test") {
-      u.badges.unshift({
-        icon: "⚙️",
-        label: "Tester",
-        color: "#00c2ff"
-      });
-    }
-
+    if (u.username === "michael-volpe") u.badges.unshift({ icon: "🛠️", label: "OWNER", color: "#f5c518" });
+    if (u.username === "test") u.badges.unshift({ icon: "⚙️", label: "Tester", color: "#00c2ff" });
     const rank = i + 1;
-
-    const rankClass =
-      rank === 1 ? 'gold' :
-      rank === 2 ? 'silver' :
-      rank === 3 ? 'bronze' : '';
-
-    const rowClass =
-      rank === 1 ? 'rank-1' :
-      rank === 2 ? 'rank-2' :
-      rank === 3 ? 'rank-3' : '';
-
-    const rankIcon =
-      rank === 1 ? '👑' :
-      rank === 2 ? '🥈' :
-      rank === 3 ? '🥉' :
-      `#${rank}`;
-
-    const meTag = u.username === myUsername
-      ? `
-        <span style="
-          font-size:9px;
-          font-family:var(--mono);
-          color:var(--accent);
-          background:var(--accentBg);
-          border:1px solid var(--accent)33;
-          border-radius:20px;
-          padding:.1rem .4rem
-        ">
-          you
-        </span>
-      `
-      : '';
-
-    // Clicking leaderboard row
-    const rowClick = u.username === myUsername
-      ? `onclick="openPanel('profile')"`
-      : `onclick="showUserProfile('${esc(u.username)}')"`;
-
-    html += `
-      <div class="lb-row ${rowClass}" style="cursor:pointer" ${rowClick}>
-
-        <div class="lb-rank ${rankClass}">
-          ${rankIcon}
-        </div>
-
-        <div class="lb-av" style="border-color:${u.color}">
-          ${u.emoji}
-        </div>
-
-        <div class="lb-info">
-
-          <div class="lb-name" style="color:${u.color}">
-            ${esc(u.alias)}
-            ${meTag}
-            ${renderBadges(u.badges, 2)}
-          </div>
-
-          <div class="lb-stats">
-            <span class="lb-stat">👍 ${u.totalPostLikes} likes</span>
-            <span class="lb-stat">📝 ${u.totalPosts} posts</span>
-            <span class="lb-stat">💬 ${u.totalComments} comments</span>
-          </div>
-
+    const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+    const rowClass  = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const rankIcon  = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+    const meTag = u.username === myUsername ? `<span style="font-size:9px;font-family:var(--mono);color:var(--accent);background:var(--accentBg);border:1px solid var(--accent)33;border-radius:20px;padding:.1rem .4rem">you</span>` : '';
+    const rowClick = u.username === myUsername ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(u.username)}')"`;
+    html += `<div class="lb-row ${rowClass}" style="cursor:pointer" ${rowClick}>
+      <div class="lb-rank ${rankClass}">${rankIcon}</div>
+      <div class="lb-av" style="border-color:${u.color}">${u.emoji}</div>
+      <div class="lb-info">
+        <div class="lb-name" style="color:${u.color}">${esc(u.alias)} ${meTag} ${renderBadges(u.badges, 2)}</div>
+        <div class="lb-stats">
+          <span class="lb-stat">👍 ${u.totalPostLikes} likes</span>
+          <span class="lb-stat">📝 ${u.totalPosts} posts</span>
+          <span class="lb-stat">💬 ${u.totalComments} comments</span>
         </div>
       </div>
-    `;
+    </div>`;
   });
-
   html += `</div>`;
-
-  // ── YOUR BADGES SECTION ──
   const me = users.find(u => u.username === myUsername);
-
   if (me && me.badges.length > 0) {
-
-    html += `
-      <div style="
-        font-size:10px;
-        font-family:var(--mono);
-        color:var(--text3);
-        text-transform:uppercase;
-        letter-spacing:.12em;
-        padding:.75rem 0 .25rem
-      ">
-        Your Badges
-      </div>
-    `;
-
-    html += `
-      <div style="
-        display:flex;
-        flex-wrap:wrap;
-        gap:.4rem
-      ">
-    `;
-
-    html += me.badges.map(b => `
-      <div style="
-        display:flex;
-        align-items:center;
-        gap:.5rem;
-        background:var(--bg2);
-        border:1px solid ${b.color}33;
-        border-radius:var(--r);
-        padding:.5rem .75rem;
-      ">
-
-        <span style="font-size:20px">
-          ${b.icon}
-        </span>
-
-        <div>
-          <div style="
-            font-size:12px;
-            font-weight:700;
-            color:${b.color}
-          ">
-            ${esc(b.label)}
-          </div>
-
-          ${b.desc ? `
-            <div style="
-              font-size:10px;
-              color:var(--text3);
-              font-family:var(--mono)
-            ">
-              ${esc(b.desc)}
-            </div>
-          ` : ''}
-
-        </div>
-      </div>
-    `).join('');
-
+    html += `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:.75rem 0 .25rem">Your Badges</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem">`;
+    html += me.badges.map(b => `<div style="display:flex;align-items:center;gap:.5rem;background:var(--bg2);border:1px solid ${b.color}33;border-radius:var(--r);padding:.5rem .75rem"><span style="font-size:20px">${b.icon}</span><div><div style="font-size:12px;font-weight:700;color:${b.color}">${esc(b.label)}</div>${b.desc?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${esc(b.desc)}</div>`:''}</div></div>`).join('');
     html += `</div>`;
   }
-
   scroll.innerHTML = html;
 }
+
 // ── CHANGELOG ──
 function renderChangelog(entries) {
   const scroll = document.getElementById('hub-scroll');
@@ -1934,20 +1742,14 @@ function renderChangelog(entries) {
       <button class="btn btn-primary" onclick="submitChangelog()" style="align-self:flex-start;font-size:13px;padding:.45rem 1rem">Post Update</button>
     </div>`;
   }
-  if (entries.length === 0) {
-    html += '<div class="hub-empty">no updates yet</div>';
-  } else {
+  if (entries.length === 0) { html += '<div class="hub-empty">no updates yet</div>'; }
+  else {
     html += entries.map(e => {
       const tagClass = `cl-tag-${e.tag}`;
       const tagLabel = { feature: '✨ Feature', fix: '🐛 Fix', improvement: '🔧 Improvement', upcoming: '🔮 Upcoming' }[e.tag] || e.tag;
       const delBtn = isAdmin ? `<button class="icon-btn" onclick="deleteChangelog('${e._id}')" title="Delete" style="color:var(--text3);margin-left:auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>` : '';
       return `<div class="cl-entry">
-        <div class="cl-header">
-          <span class="cl-tag-chip ${tagClass}">${tagLabel}</span>
-          <div class="cl-title">${esc(e.title)}</div>
-          ${e.version ? `<span class="cl-version">${esc(e.version)}</span>` : ''}
-          ${delBtn}
-        </div>
+        <div class="cl-header"><span class="cl-tag-chip ${tagClass}">${tagLabel}</span><div class="cl-title">${esc(e.title)}</div>${e.version ? `<span class="cl-version">${esc(e.version)}</span>` : ''}${delBtn}</div>
         <div class="cl-body">${esc(e.body)}</div>
         <div class="cl-time">${fmtDate(e.createdAt)} · ${fmtTime(e.createdAt)}</div>
       </div>`;
@@ -1965,13 +1767,13 @@ async function submitChangelog() {
   try {
     const res = await client.mutation("hub:createChangelog", { token: sessionToken, title, body, version: version || undefined, tag });
     if (!res.ok) { showToast(res.error || 'Error'); return; }
-    showToast('Update posted!');
+    showToast('Update posted!'); loadHub();
   } catch(e) { showToast('Error posting'); }
 }
 
 async function deleteChangelog(entryId) {
   if (!confirm('Delete this update?')) return;
-  try { await client.mutation("hub:deleteChangelog", { token: sessionToken, entryId }); } catch(e){}
+  try { await client.mutation("hub:deleteChangelog", { token: sessionToken, entryId }); loadHub(); } catch(e){}
 }
 
 // ── POLLS ──
@@ -1992,35 +1794,27 @@ function renderPolls(polls) {
       </div>
     </div>`;
   }
-  if (polls.length === 0) {
-    html += '<div class="hub-empty">no polls yet</div>';
-  } else {
+  if (polls.length === 0) { html += '<div class="hub-empty">no polls yet</div>'; }
+  else {
     html += polls.map(p => {
       const statusChip = p.isClosed ? `<span class="poll-closed-chip">Closed</span>` : `<span class="poll-open-chip">Open</span>`;
       const adminBtns  = isAdmin ? `${!p.isClosed ? `<button class="admin-close-btn" onclick="closePoll('${p._id}')">Close</button>` : ''}<button class="admin-close-btn" onclick="deletePoll('${p._id}')">Delete</button>` : '';
       const options = p.options.map((opt, i) => {
-        const count     = p.optionCounts[i] || 0;
-        const pct       = p.totalVotes > 0 ? Math.round((count / p.totalVotes) * 100) : 0;
-        const isVoted   = p.myVoteIndex === i;
-        const isWinner  = !p.isClosed && p.totalVotes > 0 && count === Math.max(...p.optionCounts);
-        const votedClass  = isVoted  ? 'voted'  : '';
-        const winnerClass = isWinner && !isVoted ? 'winner' : '';
+        const count = p.optionCounts[i] || 0;
+        const pct   = p.totalVotes > 0 ? Math.round((count / p.totalVotes) * 100) : 0;
+        const isVoted  = p.myVoteIndex === i;
+        const isWinner = !p.isClosed && p.totalVotes > 0 && count === Math.max(...p.optionCounts);
         const canVote = !p.isClosed;
-        return `<div class="poll-option">
-          <button class="poll-option-btn ${votedClass} ${winnerClass}" onclick="${canVote ? `voteOnPoll('${p._id}',${i})` : ''}" ${!canVote?'disabled':''}>
-            <div class="poll-bar"><div class="poll-bar-fill" style="width:${pct}%"></div></div>
-            <span class="poll-opt-label">${isVoted?'✓ ':''} ${esc(opt)}</span>
-            <span class="poll-pct">${pct}% (${count})</span>
-          </button>
-        </div>`;
+        return `<div class="poll-option"><button class="poll-option-btn ${isVoted?'voted':''} ${isWinner&&!isVoted?'winner':''}" onclick="${canVote?`voteOnPoll('${p._id}',${i})`:''}" ${!canVote?'disabled':''}>
+          <div class="poll-bar"><div class="poll-bar-fill" style="width:${pct}%"></div></div>
+          <span class="poll-opt-label">${isVoted?'✓ ':''} ${esc(opt)}</span>
+          <span class="poll-pct">${pct}% (${count})</span>
+        </button></div>`;
       }).join('');
       return `<div class="poll-card">
         <div class="poll-question">${esc(p.question)}</div>
         ${options}
-        <div class="poll-meta">
-          <span>${p.totalVotes} vote${p.totalVotes!==1?'s':''}</span>
-          <span style="display:flex;align-items:center;gap:.4rem">${statusChip}${adminBtns}</span>
-        </div>
+        <div class="poll-meta"><span>${p.totalVotes} vote${p.totalVotes!==1?'s':''}</span><span style="display:flex;align-items:center;gap:.4rem">${statusChip}${adminBtns}</span></div>
       </div>`;
     }).join('');
   }
@@ -2028,39 +1822,34 @@ function renderPolls(polls) {
 }
 
 function addPollOption() {
-  const list = document.getElementById('poll-opts-list');
-  if (!list) return;
+  const list = document.getElementById('poll-opts-list'); if (!list) return;
   const count = list.querySelectorAll('.poll-opt-input').length;
   if (count >= 6) { showToast('Max 6 options'); return; }
   const input = document.createElement('input');
-  input.className = 'admin-input poll-opt-input';
-  input.placeholder = `Option ${count + 1}`;
+  input.className = 'admin-input poll-opt-input'; input.placeholder = `Option ${count + 1}`;
   list.appendChild(input);
 }
 
 async function submitPoll() {
   const q = document.getElementById('poll-q')?.value.trim();
-  const optInputs = document.querySelectorAll('.poll-opt-input');
-  const options = Array.from(optInputs).map(i => i.value.trim()).filter(Boolean);
+  const options = Array.from(document.querySelectorAll('.poll-opt-input')).map(i => i.value.trim()).filter(Boolean);
   if (!q) { showToast('Enter a question'); return; }
   if (options.length < 2) { showToast('Need at least 2 options'); return; }
   try {
     const res = await client.mutation("hub:createPoll", { token: sessionToken, question: q, options });
     if (!res.ok) { showToast(res.error || 'Error'); return; }
-    showToast('Poll created!');
+    showToast('Poll created!'); loadHub();
   } catch(e) { showToast('Error'); }
 }
 
 async function voteOnPoll(pollId, optionIndex) {
-  try { await client.mutation("hub:votePoll", { token: sessionToken, pollId, optionIndex }); } catch(e) { showToast('Error voting'); }
+  try { await client.mutation("hub:votePoll", { token: sessionToken, pollId, optionIndex }); loadHub(); } catch(e) { showToast('Error voting'); }
 }
 async function closePoll(pollId) {
-  try { await client.mutation("hub:closePoll", { token: sessionToken, pollId }); } catch(e){}
-}
+  try { await client.mutation("hub:closePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){} }
 async function deletePoll(pollId) {
   if (!confirm('Delete this poll?')) return;
-  try { await client.mutation("hub:deletePoll", { token: sessionToken, pollId }); } catch(e){}
-}
+  try { await client.mutation("hub:deletePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){} }
 
 // ── IDEAS ──
 function renderIdeas(ideas) {
@@ -2078,29 +1867,22 @@ function renderIdeas(ideas) {
     }
   </div>`;
   html += `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:.25rem 0">Community Ideas — sorted by votes</div>`;
-  if (ideas.length === 0) {
-    html += '<div class="hub-empty">no ideas yet — be first!</div>';
-  } else {
+  if (ideas.length === 0) { html += '<div class="hub-empty">no ideas yet — be first!</div>'; }
+  else {
     html += ideas.map((idea, rank) => {
       const delBtn = (idea.isMe || isAdmin) ? `<button class="idea-del-btn" onclick="deleteIdea('${idea._id}')">delete</button>` : '';
       const isTop  = rank === 0 && idea.voteCount > 0;
-      // Idea author alias is clickable
-      const authorClick = idea.isMe
-        ? `onclick="openPanel('profile')"`
-        : `onclick="showUserProfile('${esc(idea.authorUsername)}')"`;
+      const authorClick = idea.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(idea.authorUsername)}')"`;
       return `<div class="idea-card" ${isTop?'style="border-color:rgba(245,197,24,.3);background:linear-gradient(90deg,rgba(245,197,24,.04),transparent)"':''}>
         <div class="idea-vote-col">
-          <button class="idea-vote-btn ${idea.hasVoted?'voted':''}" onclick="voteOnIdea('${idea._id}')">
-            ${idea.hasVoted?'▲':'△'}
-          </button>
+          <button class="idea-vote-btn ${idea.hasVoted?'voted':''}" onclick="voteOnIdea('${idea._id}')">${idea.hasVoted?'▲':'△'}</button>
           <div class="idea-vote-count">${idea.voteCount}</div>
         </div>
         <div class="idea-body">
           <div class="idea-text">${isTop?'👑 ':''}${esc(idea.text)}</div>
           <div class="idea-meta">
             <span class="idea-author-tag" style="cursor:pointer" ${authorClick}>${idea.emoji} <span style="color:${idea.color}">${esc(idea.alias)}</span></span>
-            <span>·</span>
-            <span>${fmtTime(idea.createdAt)}</span>
+            <span>·</span><span>${fmtTime(idea.createdAt)}</span>
             ${idea.isMe?'<span style="color:var(--accent);font-size:9px">· yours</span>':''}
             ${delBtn}
           </div>
@@ -2123,17 +1905,16 @@ async function submitIdea() {
   try {
     const res = await client.mutation("hub:submitIdea", { token: sessionToken, text });
     if (!res.ok) { showToast(res.error || 'Error'); return; }
-    showToast('Idea submitted!');
+    showToast('Idea submitted!'); loadHub();
   } catch(e) { showToast('Error submitting'); }
 }
 
 async function deleteIdea(ideaId) {
   if (!confirm('Delete this idea?')) return;
-  try { await client.mutation("hub:deleteIdea", { token: sessionToken, ideaId }); } catch(e){}
-}
+  try { await client.mutation("hub:deleteIdea", { token: sessionToken, ideaId }); loadHub(); } catch(e){} }
 
 async function voteOnIdea(ideaId) {
-  try { await client.mutation("hub:voteIdea", { token: sessionToken, ideaId }); } catch(e) { showToast('Error voting'); }
+  try { await client.mutation("hub:voteIdea", { token: sessionToken, ideaId }); loadHub(); } catch(e) { showToast('Error voting'); }
 }
 </script>
 </body>
