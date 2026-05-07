@@ -1,3 +1,4 @@
+/* ── POST MEDIA ── */
 .post-media {
   display: flex;
   justify-content: flex-start;
@@ -10,11 +11,11 @@
   width: 70%;
   max-width: 350px;
   aspect-ratio: 16 / 9;
-  object-fit: contain;   /* 👈 KEY FIX (no cropping) */
+  object-fit: contain;
   border-radius: 8px;
   border: 1px solid var(--border2);
   display: block;
-  background: #000;      /* optional: fills empty space nicely */
+  background: #000;
 }
 
 .post-video {
@@ -44,3 +45,76 @@
   border: none;
   display: block;
 }
+
+/* ── USER PROFILE POPUP ── */
+.user-popup-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(2px);
+  display: none; align-items: center; justify-content: center;
+}
+.user-popup-overlay.open { display: flex; }
+.user-popup-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--rLg); width: 320px; max-width: calc(100vw - 2rem);
+  box-shadow: 0 24px 64px rgba(0,0,0,.7); overflow: hidden;
+  animation: popIn .15s cubic-bezier(.4,0,.2,1);
+}
+@keyframes popIn { from { transform: scale(.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.user-popup-banner {
+  height: 64px;
+  background: linear-gradient(135deg, var(--popup-banner-color, #5b7fff) 0%, color-mix(in srgb, var(--popup-banner-color, #5b7fff) 50%, #080a0f) 100%);
+  opacity: .35;
+}
+.user-popup-avatar-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 1.1rem; margin-top: -28px; margin-bottom: .75rem;
+}
+.user-popup-av {
+  width: 56px; height: 56px; border-radius: 14px; font-size: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg3); border: 3px solid var(--bg2);
+  position: relative; flex-shrink: 0;
+}
+.user-popup-online-ring {
+  position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--green); border: 2.5px solid var(--bg2);
+  display: none;
+}
+.user-popup-online-ring.visible { display: block; }
+.user-popup-add-btn {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 8px; padding: .4rem .9rem; font-size: 12px;
+  font-weight: 700; font-family: var(--mono); cursor: pointer;
+  transition: all .15s; letter-spacing: .04em;
+}
+.user-popup-add-btn:hover { background: var(--accent2); }
+.user-popup-add-btn.friends {
+  background: var(--bg4); color: var(--green); border: 1px solid rgba(46,204,138,.3);
+}
+.user-popup-add-btn.friends:hover { background: rgba(255,77,106,.1); color: var(--red); border-color: rgba(255,77,106,.3); }
+.user-popup-add-btn.pending {
+  background: var(--bg4); color: var(--text3); border: 1px solid var(--border);
+  cursor: default;
+}
+.user-popup-body { padding: 0 1.1rem 1.1rem; }
+.user-popup-name-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .15rem; flex-wrap: wrap; }
+.user-popup-alias { font-size: 17px; font-weight: 700; }
+.user-popup-online-label { font-size: 11px; font-family: var(--mono); color: var(--green); display: none; }
+.user-popup-online-label.visible { display: inline; }
+.user-popup-offline-label { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+.user-popup-bio { font-size: 13px; color: var(--text2); margin: .35rem 0 .65rem; min-height: 1.2em; font-family: var(--sans); line-height: 1.5; }
+.user-popup-divider { border: none; border-top: 1px solid var(--border); margin: .6rem 0; }
+.user-popup-meta { display: flex; align-items: center; gap: .5rem; font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: .5rem; }
+.user-popup-badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; }
+.user-popup-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: 11px; font-family: var(--mono); border-radius: 20px;
+  padding: .15rem .5rem; border: 1px solid; white-space: nowrap;
+}
+.user-popup-chat-btn {
+  width: 100%; margin-top: .75rem; padding: .55rem; border-radius: var(--r);
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer;
+  transition: all .15s; display: flex; align-items: center; justify-content: center; gap: .4rem;
+}
+.user-popup-chat-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
