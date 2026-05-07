@@ -611,3 +611,88 @@ input, textarea { font-family: var(--sans); }
   border-color: var(--accent);
   color: var(--accent);
 }
+/* ── GROUP CHAT ── */
+.group-av-mini {
+  position: absolute;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg3);
+}
+.msg-sender-alias {
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  margin-bottom: .1rem;
+  margin-left: .1rem;
+}
+
+/* ── NEW GROUP MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  display: none; align-items: center; justify-content: center;
+  z-index: 300;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--rLg);
+  width: 100%; max-width: 380px;
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.7);
+  animation: slideUp .18s ease;
+}
+@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.1rem .75rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-title { font-weight: 700; font-size: 15px; }
+.modal-body {
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+.group-member-row {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .45rem .55rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .12s, border-color .12s;
+  position: relative;
+}
+.group-member-row:hover { background: var(--bg3); }
+.group-member-row.selected { background: var(--accentBg); border-color: var(--accent); }
+.group-check {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: transparent;
+  transition: all .12s;
+  flex-shrink: 0;
+}
+.group-check.visible {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.group-chip {
+  display: inline-flex; align-items: center; gap: .2rem;
+  background: var(--accentBg);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: .15rem .55rem;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--accent);
+}
