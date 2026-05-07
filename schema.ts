@@ -11,7 +11,6 @@ export default defineSchema({
     color: v.optional(v.string()),
     emoji: v.optional(v.string()),
     lastSeen: v.optional(v.number()),
-    // Badge tracking fields (auto-computed but cached for perf)
     totalPostLikes: v.optional(v.number()),
     totalPosts: v.optional(v.number()),
     totalComments: v.optional(v.number()),
@@ -86,7 +85,8 @@ export default defineSchema({
     likeCount: v.number(),
     dislikeCount: v.number(),
   })
-    .index("by_post", ["postId", "createdAt"]),
+    .index("by_post", ["postId", "createdAt"])
+    .index("by_author", ["authorUsername"]),  // NEW: fixes full-table scan
 
   commentReactions: defineTable({
     commentId: v.id("comments"),
@@ -111,24 +111,21 @@ export default defineSchema({
     .index("by_to", ["toUsername", "createdAt"])
     .index("by_to_unread", ["toUsername", "read"]),
 
-  // ── CHANGELOG / UPDATES ──
-  // Only the owner (specific username) can post these
   changelog: defineTable({
-    authorUsername: v.string(), // should be the admin
+    authorUsername: v.string(),
     title: v.string(),
     body: v.string(),
-    version: v.optional(v.string()), // e.g. "v1.2"
+    version: v.optional(v.string()),
     tag: v.union(v.literal("feature"), v.literal("fix"), v.literal("improvement"), v.literal("upcoming")),
     createdAt: v.number(),
   })
     .index("by_created", ["createdAt"]),
 
-  // ── POLLS (admin-created) ──
   polls: defineTable({
-    authorUsername: v.string(), // admin only
+    authorUsername: v.string(),
     question: v.string(),
     options: v.array(v.string()),
-    endsAt: v.optional(v.number()), // timestamp when poll closes, optional
+    endsAt: v.optional(v.number()),
     createdAt: v.number(),
     closed: v.optional(v.boolean()),
   })
@@ -143,8 +140,6 @@ export default defineSchema({
     .index("by_poll", ["pollId"])
     .index("by_poll_user", ["pollId", "username"]),
 
-  // ── COMMUNITY IDEAS ──
-  // One idea per user (enforced in mutation)
   ideas: defineTable({
     authorUsername: v.string(),
     text: v.string(),
