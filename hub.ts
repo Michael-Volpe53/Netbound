@@ -22,21 +22,10 @@ async function getProfile(ctx: any, username: string) {
     return { alias: username, color: "#5b7fff", emoji: "🦊", bio: "", createdAt: 0, badges: [] };
   }
 
-  const userPosts = await ctx.db
-    .query("posts")
-    .withIndex("by_author", (q: any) => q.eq("authorUsername", username))
-    .collect();
-
-  const totalPostLikes = userPosts.reduce((sum: number, p: any) => sum + (p.likeCount ?? 0), 0);
-  const totalPosts = userPosts.length;
-
-  // FIX: use by_author index instead of collect() + filter
-  const userComments = await ctx.db
-    .query("comments")
-    .withIndex("by_author", (q: any) => q.eq("authorUsername", username))
-    .collect();
-  const totalComments = userComments.length;
-
+  // Read pre-computed stats directly — no nested queries needed
+  const totalPostLikes = user.totalPostLikes ?? 0;
+  const totalPosts     = user.totalPosts     ?? 0;
+  const totalComments  = user.totalComments  ?? 0;
   const accountAgeDays = Math.floor((Date.now() - user.createdAt) / 86400000);
 
   const badges = computeBadges({
@@ -52,7 +41,7 @@ async function getProfile(ctx: any, username: string) {
   if (username === "michael-volpe") {
     badges.push({ id: "owner", label: "Owner", icon: "🛠️", color: "#f5c518", desc: "" });
   }
-  if (username === "test" || username === "test1") {
+  if (username === "test") {
     badges.push({ id: "tester", label: "Tester", icon: "🧪", color: "#2ecc8a", desc: "" });
   }
 
@@ -76,9 +65,9 @@ export function computeBadges(stats: {
   isMostActive: boolean;
 }) {
   const badges: { id: string; label: string; icon: string; color: string; desc: string }[] = [];
-  if (stats.isTopLiked)  badges.push({ id: "crown", label: "Most Liked",   icon: "👑", color: "#f5c518", desc: "Holds the most liked post" });
-  if (stats.isTopPoster) badges.push({ id: "fire",  label: "Top Poster",   icon: "🔥", color: "#ff6b35", desc: "Most posts on the platform" });
-  if (stats.isMostActive)badges.push({ id: "bolt",  label: "Most Active",  icon: "⚡", color: "#5b7fff", desc: "Most comments left" });
+  if (stats.isTopLiked)   badges.push({ id: "crown",   label: "Most Liked",   icon: "👑", color: "#f5c518", desc: "Holds the most liked post" });
+  if (stats.isTopPoster)  badges.push({ id: "fire",    label: "Top Poster",   icon: "🔥", color: "#ff6b35", desc: "Most posts on the platform" });
+  if (stats.isMostActive) badges.push({ id: "bolt",    label: "Most Active",  icon: "⚡", color: "#5b7fff", desc: "Most comments left" });
   if (stats.totalPostLikes >= 50) badges.push({ id: "star50",  label: "50 Likes",   icon: "⭐", color: "#f5c518", desc: "Earned 50 total post likes" });
   if (stats.totalPostLikes >= 10) badges.push({ id: "star10",  label: "10 Likes",   icon: "✨", color: "#8892ab", desc: "Earned 10 total post likes" });
   if (stats.totalPosts >= 25)     badges.push({ id: "posts25", label: "25 Posts",   icon: "📜", color: "#2ecc8a", desc: "Posted 25 times" });
@@ -89,7 +78,9 @@ export function computeBadges(stats: {
   return badges;
 }
 
-// FIX: leaderboard now uses indexed queries, not collect()+filter
+// ── LEADERBOARD ──
+// Previously: looped over every user and ran sub-queries for posts/comments per user → O(users × posts)
+// Now: reads pre-computed totalPostLikes/totalPosts/totalComments directly from users table → O(users)
 export const getLeaderboard = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
@@ -98,58 +89,53 @@ export const getLeaderboard = query({
 
     const allUsers = await ctx.db.query("users").collect();
 
-    const userStats = await Promise.all(
-      allUsers.map(async (u: any) => {
-        const userPosts = await ctx.db
-          .query("posts")
-          .withIndex("by_author", (q: any) => q.eq("authorUsername", u.username))
-          .collect();
-        const totalPostLikes = userPosts.reduce((sum: number, p: any) => sum + (p.likeCount ?? 0), 0);
-        const totalPosts = userPosts.length;
-
-        // FIX: use index instead of collect()+filter
-        const userComments = await ctx.db
-          .query("comments")
-          .withIndex("by_author", (q: any) => q.eq("authorUsername", u.username))
-          .collect();
-        const totalComments = userComments.length;
-
-        const topPostLikes = userPosts.reduce((max: number, p: any) => Math.max(max, p.likeCount ?? 0), 0);
-        const topPost = userPosts.find((p: any) => (p.likeCount ?? 0) === topPostLikes) ?? null;
-        const accountAgeDays = Math.floor((Date.now() - u.createdAt) / 86400000);
-
-        return {
-          username: u.username,
-          alias: u.alias,
-          color: u.color ?? "#5b7fff",
-          emoji: u.emoji ?? "🦊",
-          bio: u.bio ?? "",
-          totalPostLikes,
-          totalPosts,
-          totalComments,
-          topPost,
-          accountAgeDays,
-        };
-      })
-    );
+    const userStats = allUsers.map((u: any) => {
+      const totalPostLikes = u.totalPostLikes ?? 0;
+      const totalPosts     = u.totalPosts     ?? 0;
+      const totalComments  = u.totalComments  ?? 0;
+      const accountAgeDays = Math.floor((Date.now() - u.createdAt) / 86400000);
+      return {
+        username:     u.username,
+        alias:        u.alias,
+        color:        u.color        ?? "#5b7fff",
+        emoji:        u.emoji        ?? "🦊",
+        bio:          u.bio          ?? "",
+        totalPostLikes,
+        totalPosts,
+        totalComments,
+        accountAgeDays,
+      };
+    });
 
     const maxLikes    = Math.max(...userStats.map((u: any) => u.totalPostLikes), 0);
-    const maxPosts    = Math.max(...userStats.map((u: any) => u.totalPosts), 0);
-    const maxComments = Math.max(...userStats.map((u: any) => u.totalComments), 0);
+    const maxPosts    = Math.max(...userStats.map((u: any) => u.totalPosts),     0);
+    const maxComments = Math.max(...userStats.map((u: any) => u.totalComments),  0);
 
     const enriched = userStats.map((u: any) => {
-      const isTopLiked   = u.totalPostLikes  === maxLikes    && maxLikes > 0;
-      const isTopPoster  = u.totalPosts      === maxPosts    && maxPosts > 0;
-      const isMostActive = u.totalComments   === maxComments && maxComments > 0;
-      const badges = computeBadges({ totalPostLikes: u.totalPostLikes, totalPosts: u.totalPosts, totalComments: u.totalComments, accountAgeDays: u.accountAgeDays, isTopPoster, isTopLiked, isMostActive });
+      const isTopLiked   = u.totalPostLikes === maxLikes    && maxLikes    > 0;
+      const isTopPoster  = u.totalPosts     === maxPosts    && maxPosts    > 0;
+      const isMostActive = u.totalComments  === maxComments && maxComments > 0;
+      const badges = computeBadges({
+        totalPostLikes: u.totalPostLikes,
+        totalPosts:     u.totalPosts,
+        totalComments:  u.totalComments,
+        accountAgeDays: u.accountAgeDays,
+        isTopPoster,
+        isTopLiked,
+        isMostActive,
+      });
+      // Special badges
+      if (u.username === "michael-volpe") badges.push({ id: "owner", label: "Owner", icon: "🛠️", color: "#f5c518", desc: "" });
+      if (u.username === "test")          badges.push({ id: "tester", label: "Tester", icon: "🧪", color: "#2ecc8a", desc: "" });
       return { ...u, badges, isTopLiked, isTopPoster, isMostActive };
     });
 
     enriched.sort((a: any, b: any) => b.totalPostLikes - a.totalPostLikes);
 
-    const allPosts = await ctx.db.query("posts").withIndex("by_created").order("desc").take(500);
-    const topPost = allPosts.length > 0
-      ? allPosts.reduce((best: any, p: any) => (p.likeCount > (best?.likeCount ?? -1) ? p : best), null)
+    // Top post: still needs one query but it's a single indexed scan, not per-user
+    const recentPosts = await ctx.db.query("posts").withIndex("by_created").order("desc").take(500);
+    const topPost = recentPosts.length > 0
+      ? recentPosts.reduce((best: any, p: any) => (p.likeCount > (best?.likeCount ?? -1) ? p : best), null)
       : null;
 
     let topPostData = null;
