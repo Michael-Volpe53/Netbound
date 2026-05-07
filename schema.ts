@@ -157,4 +157,28 @@ export default defineSchema({
     .index("by_idea", ["ideaId"])
     .index("by_idea_user", ["ideaId", "username"])
     .index("by_user", ["username"]),
+  groupChats: defineTable({
+    name: v.string(),
+    members: v.array(v.string()),   // array of usernames
+    createdBy: v.string(),
+    createdAt: v.number(),
+    lastMessageAt: v.optional(v.number()),
+  })
+    .index("by_created", ["createdAt"]),
+
+  groupMessages: defineTable({
+    groupId: v.id("groupChats"),
+    fromUsername: v.string(),
+    text: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_group", ["groupId", "createdAt"]),
+
+  groupReads: defineTable({
+    groupId: v.id("groupChats"),
+    username: v.string(),
+    lastReadAt: v.number(),
+  })
+    .index("by_group_user", ["groupId", "username"])
+    .index("by_user", ["username"]),
 });
