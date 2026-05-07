@@ -1369,7 +1369,7 @@ function renderLeaderboard(data) {
   html += `<div class="lb-table">`;
   users.forEach((u, i) => {
     if (u.username === "michael-volpe") u.badges.unshift({ icon:"🛠️", label:"OWNER", color:"#f5c518" });
-    if (u.username === "test")          u.badges.unshift({ icon:"⚙️", label:"Tester", color:"#00c2ff" });
+    if (u.username === "test" || u.username === "test1")          u.badges.unshift({ icon:"⚙️", label:"Tester", color:"#00c2ff" });
     const rank = i + 1;
     const rankClass = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
     const rowClass  = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
