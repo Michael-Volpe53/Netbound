@@ -4,551 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Netbound</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg:       #080a0f;
-  --bg2:      #0d1018;
-  --bg3:      #141720;
-  --bg4:      #1a1e2a;
-  --border:   #1f2433;
-  --border2:  #283044;
-  --accent:   #5b7fff;
-  --accent2:  #3d5ce8;
-  --accentBg: rgba(91,127,255,0.10);
-  --text:     #e4e7f0;
-  --text2:    #8892ab;
-  --text3:    #4a5270;
-  --green:    #2ecc8a;
-  --red:      #ff4d6a;
-  --yellow:   #f5c518;
-  --mono:     'Space Mono', monospace;
-  --sans:     'Syne', sans-serif;
-  --r:        10px;
-  --rLg:      16px;
-  --myColor:  #5b7fff;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; }
-body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
-button { font-family: var(--sans); cursor: pointer; }
-input, textarea { font-family: var(--sans); }
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-/* ── LOADING ── */
-#loading-screen {
-  position: fixed; inset: 0; background: var(--bg);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem; z-index: 1000;
-}
-.loading-logo { font-family: var(--mono); font-size: 2.2rem; color: var(--accent); letter-spacing: -2px; }
-.loading-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-.spinner { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── AUTH ── */
-#auth-screen {
-  display: none; min-height: 100vh; align-items: center; justify-content: center;
-  flex-direction: column; padding: 2rem; background: var(--bg);
-  background-image: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(91,127,255,0.10) 0%, transparent 70%);
-}
-.auth-logo { font-family: var(--mono); font-size: 2.6rem; color: var(--accent); letter-spacing: -2px; margin-bottom: .1rem; }
-.auth-tag  { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-bottom: 2.5rem; letter-spacing: .1em; text-transform: uppercase; }
-.auth-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--rLg); padding: 2rem; width: 100%; max-width: 400px;
-  box-shadow: 0 0 0 1px rgba(91,127,255,0.05), 0 24px 64px rgba(0,0,0,.6);
-}
-.auth-tabs { display: flex; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 1.75rem; }
-.auth-tab  { flex: 1; padding: .6rem; text-align: center; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; border: none; color: var(--text3); transition: all .15s; font-family: var(--sans); letter-spacing: .02em; }
-.auth-tab.active { background: var(--bg4); color: var(--text); }
-.auth-form { display: flex; flex-direction: column; gap: 1rem; }
-.fg label  { display: block; font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .35rem; }
-.fg input  { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .65rem .85rem; color: var(--text); font-size: 14px; outline: none; transition: border .15s; font-family: var(--sans); }
-.fg input:focus { border-color: var(--accent); }
-.btn { padding: .7rem 1.25rem; border-radius: var(--r); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; font-family: var(--sans); letter-spacing: .02em; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent2); }
-.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-.btn-secondary { background: var(--bg4); color: var(--text2); border: 1px solid var(--border); }
-.btn-secondary:hover { color: var(--text); background: var(--bg3); }
-.btn-full { width: 100%; }
-.msg-box { font-size: 12px; padding: .5rem .75rem; border-radius: 6px; display: none; font-family: var(--mono); }
-.msg-box.error   { color: var(--red);   background: rgba(255,77,106,.07);  border: 1px solid rgba(255,77,106,.2); }
-.msg-box.success { color: var(--green); background: rgba(46,204,138,.07); border: 1px solid rgba(46,204,138,.2); }
-
-/* ── APP SHELL ── */
-#app-screen { display: none; height: 100vh; flex-direction: column; }
-
-/* TOPBAR */
-.topbar {
-  height: 52px; background: var(--bg2); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 1rem; gap: .6rem; flex-shrink: 0; position: relative;
-}
-.topbar-logo { font-family: var(--mono); color: var(--accent); font-size: 1rem; letter-spacing: -1px; margin-right: auto; }
-.user-count-badge {
-  font-family: var(--mono); font-size: 10px; color: var(--text3);
-  background: var(--bg3); border: 1px solid var(--border); border-radius: 20px;
-  padding: .15rem .55rem; display: flex; align-items: center; gap: .35rem;
-}
-.user-count-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-.icon-btn {
-  background: transparent; border: none; color: var(--text3); padding: .4rem; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center; transition: color .15s, background .15s; position: relative;
-}
-.icon-btn:hover { color: var(--text); background: var(--bg3); }
-.notif-badge {
-  position: absolute; top: 1px; right: 1px; min-width: 15px; height: 15px;
-  background: var(--red); border-radius: 8px; font-size: 9px; font-weight: 700; color: #fff;
-  display: none; align-items: center; justify-content: center; padding: 0 3px;
-  font-family: var(--mono);
-}
-
-.avatar {
-  width: 30px; height: 30px; border-radius: 50%; background: var(--accentBg);
-  border: 1.5px solid var(--accent); display: flex; align-items: center; justify-content: center;
-  font-size: 14px; flex-shrink: 0; cursor: pointer; user-select: none; transition: border-color .2s;
-}
-
-/* ── TAB BAR ── */
-.tab-bar {
-  display: flex; background: var(--bg2); border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.tab-btn {
-  flex: 1; padding: .6rem .5rem; display: flex; flex-direction: column; align-items: center;
-  gap: .2rem; background: transparent; border: none; color: var(--text3);
-  font-size: 10px; font-family: var(--mono); letter-spacing: .06em; text-transform: uppercase;
-  cursor: pointer; position: relative; transition: color .15s;
-  border-bottom: 2px solid transparent;
-}
-.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab-btn svg { flex-shrink: 0; }
-.tab-notif {
-  position: absolute; top: 6px; right: calc(50% - 16px);
-  min-width: 14px; height: 14px; background: var(--red); border-radius: 8px;
-  font-size: 8px; font-weight: 700; color: #fff; display: none;
-  align-items: center; justify-content: center; padding: 0 3px; font-family: var(--mono);
-}
-
-/* ── LAYOUT ── */
-.main-layout { display: flex; flex: 1; overflow: hidden; }
-
-/* ── VIEWS ── */
-#dms-view, #feed-view, #hub-view { display: none; flex: 1; overflow: hidden; }
-#dms-view.active { display: flex; }
-#feed-view.active { display: flex; flex-direction: column; }
-#hub-view.active  { display: flex; flex-direction: column; }
-
-/* SIDEBAR */
-.sidebar { width: 260px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
-.sidebar-head { padding: .75rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.sidebar-title { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: .12em; }
-.sidebar-search { padding: .55rem .85rem; border-bottom: 1px solid var(--border); }
-.sidebar-search input {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r);
-  padding: .4rem .7rem; color: var(--text); font-size: 12px; outline: none; font-family: var(--mono);
-}
-.sidebar-search input:focus { border-color: var(--accent); }
-.conv-list { flex: 1; overflow-y: auto; }
-
-.conv-item {
-  padding: .7rem .9rem; cursor: pointer; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: .65rem; transition: background .1s; position: relative;
-}
-.conv-item:hover { background: var(--bg3); }
-.conv-item.active { background: var(--bg4); }
-.conv-av-wrap { position: relative; flex-shrink: 0; }
-.conv-av {
-  width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center;
-  justify-content: center; font-size: 18px; border: 1.5px solid transparent; transition: border-color .2s;
-  background: var(--bg3);
-}
-.online-dot {
-  position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px;
-  border-radius: 50%; background: var(--green); border: 2px solid var(--bg2); display: none;
-}
-.online-dot.visible { display: block; }
-.conv-info { flex: 1; min-width: 0; }
-.conv-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conv-preview { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; font-family: var(--mono); }
-.conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
-.conv-time { font-size: 10px; color: var(--text3); font-family: var(--mono); }
-.unread-chip {
-  min-width: 18px; height: 18px; background: var(--accent); border-radius: 9px;
-  font-size: 9px; font-weight: 700; color: #fff; display: flex; align-items: center;
-  justify-content: center; padding: 0 4px; font-family: var(--mono);
-}
-.empty-list { padding: 2rem 1rem; text-align: center; color: var(--text3); font-size: 12px; font-family: var(--mono); }
-.empty-list-icon { font-size: 1.8rem; margin-bottom: .5rem; }
-
-/* ── CHAT AREA ── */
-.chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
-.chat-placeholder { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; color: var(--text3); }
-.chat-placeholder-icon { font-size: 3rem; margin-bottom: .5rem; }
-
-#chat-view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
-
-.chat-head {
-  padding: .75rem 1.25rem; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: .85rem; background: var(--bg2); flex-shrink: 0;
-}
-.chat-head-av {
-  width: 38px; height: 38px; border-radius: 12px; font-size: 20px;
-  display: flex; align-items: center; justify-content: center; background: var(--bg3); border: 1.5px solid transparent;
-}
-.chat-head-name { font-weight: 700; font-size: 15px; }
-.chat-head-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); display: flex; align-items: center; gap: .4rem; }
-.online-text { color: var(--green); }
-
-.chat-messages { flex: 1; overflow-y: auto; padding: 1.25rem 1.25rem 1rem; display: flex; flex-direction: column; gap: 0; }
-.date-divider { display: flex; align-items: center; gap: .75rem; margin: 1rem 0 .75rem; }
-.date-divider::before, .date-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.date-divider span { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
-
-.msg-row { display: flex; align-items: flex-end; gap: .55rem; max-width: 82%; margin-bottom: .2rem; }
-.msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-.msg-row.them { align-self: flex-start; }
-.msg-av-small { width: 28px; height: 28px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg3); border: 1px solid transparent; margin-bottom: 2px; }
-.msg-av-spacer { width: 28px; flex-shrink: 0; }
-.msg-row.me .msg-bubble { background: var(--bg3); border: 1px solid var(--border2); border-right: 3px solid var(--myColor); color: var(--text); border-radius: 14px 4px 14px 14px; position: relative; }
-.msg-row.me .msg-bubble::before { content: ''; position: absolute; top: 0; right: -3px; bottom: 0; width: 3px; background: linear-gradient(to bottom, var(--myColor), color-mix(in srgb, var(--myColor) 60%, transparent)); border-radius: 0 4px 4px 0; }
-.msg-row.them .msg-bubble { background: var(--bg3); border: 1px solid var(--border2); border-left: 3px solid var(--otherColor, var(--border2)); color: var(--text); border-radius: 4px 14px 14px 14px; }
-.msg-bubble { padding: .55rem .9rem; font-size: 14px; line-height: 1.55; word-break: break-word; }
-.msg-row.me.grouped-top    .msg-bubble { border-top-right-radius: 4px; }
-.msg-row.me.grouped-bottom .msg-bubble { border-bottom-right-radius: 4px; }
-.msg-row.them.grouped-top    .msg-bubble { border-top-left-radius: 4px; }
-.msg-row.them.grouped-bottom .msg-bubble { border-bottom-left-radius: 4px; }
-.msg-ts-inline { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 3px; padding: 0 2px; }
-.msg-row.me   .msg-ts-inline { text-align: right; }
-.msg-row.them .msg-ts-inline { text-align: left; }
-
-.chat-input-bar { padding: .75rem 1rem; border-top: 1px solid var(--border); display: flex; gap: .6rem; align-items: flex-end; background: var(--bg2); flex-shrink: 0; }
-.chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: .6rem .9rem; color: var(--text); font-size: 14px; outline: none; resize: none; max-height: 120px; line-height: 1.5; font-family: var(--sans); transition: border-color .15s; }
-.chat-input:focus { border-color: var(--accent); }
-.send-btn { background: var(--myColor); border: none; border-radius: 12px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; transition: background .15s, transform .1s; font-size: 16px; }
-.send-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
-.send-btn:active { transform: scale(.96); }
-.send-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-
-/* ── FEED VIEW ── */
-#feed-view { flex-direction: column; overflow: hidden; background: var(--bg); }
-.feed-tabs { display: flex; padding: .6rem 1rem; gap: .5rem; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
-.feed-tab-btn { padding: .35rem .85rem; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; transition: all .15s; font-family: var(--mono); }
-.feed-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.feed-scroll { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .85rem; }
-
-.compose-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rLg); padding: .9rem 1rem; display: flex; flex-direction: column; gap: .65rem; }
-.compose-textarea { width: 100%; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; font-family: var(--sans); resize: none; min-height: 52px; line-height: 1.5; padding: 0; }
-.compose-textarea::placeholder { color: var(--text3); }
-.compose-footer { display: flex; align-items: center; justify-content: space-between; }
-.compose-hint { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-.compose-post-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: .4rem 1rem; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: var(--sans); }
-.compose-post-btn:hover { background: var(--accent2); }
-.compose-post-btn:disabled { opacity: .5; cursor: not-allowed; }
-
-.post-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rLg); overflow: hidden; transition: border-color .15s; }
-.post-card:hover { border-color: var(--border2); }
-.post-header { display: flex; align-items: center; gap: .65rem; padding: .8rem 1rem .55rem; }
-.post-av { width: 34px; height: 34px; border-radius: 10px; font-size: 17px; display: flex; align-items: center; justify-content: center; background: var(--bg3); flex-shrink: 0; border: 1.5px solid transparent; }
-.post-alias { font-size: 13px; font-weight: 700; }
-.post-time  { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
-.post-body { padding: .1rem 1rem .7rem; font-size: 14px; line-height: 1.6; color: var(--text); }
-.post-actions { display: flex; align-items: center; gap: 0; border-top: 1px solid var(--border); padding: .4rem .75rem; }
-.react-btn { display: flex; align-items: center; gap: .35rem; padding: .35rem .65rem; border-radius: 8px; background: transparent; border: none; color: var(--text3); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all .12s; }
-.react-btn:hover { background: var(--bg3); }
-.react-btn.liked    { color: var(--accent); }
-.react-btn.disliked { color: var(--red); }
-.comment-toggle-btn { display: flex; align-items: center; gap: .35rem; padding: .35rem .65rem; border-radius: 8px; background: transparent; border: none; color: var(--text3); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all .12s; margin-left: auto; }
-.comment-toggle-btn:hover { background: var(--bg3); color: var(--text); }
-.post-delete-btn { display: flex; align-items: center; padding: .35rem .55rem; border-radius: 8px; background: transparent; border: none; color: var(--text3); font-size: 12px; cursor: pointer; transition: all .12s; }
-.post-delete-btn:hover { background: rgba(255,77,106,.1); color: var(--red); }
-
-.comments-section { border-top: 1px solid var(--border); background: var(--bg); padding: .65rem 1rem; display: none; flex-direction: column; gap: .5rem; }
-.comments-section.open { display: flex; }
-.comment-row { display: flex; gap: .5rem; align-items: flex-start; }
-.comment-av { width: 26px; height: 26px; border-radius: 7px; font-size: 13px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bg3); border: 1px solid transparent; margin-top: 1px; }
-.comment-content { flex: 1; min-width: 0; }
-.comment-alias { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
-.comment-text { font-size: 13px; color: var(--text2); line-height: 1.45; }
-.comment-meta { display: flex; align-items: center; gap: .3rem; margin-top: 3px; }
-.comment-time { font-size: 10px; color: var(--text3); font-family: var(--mono); }
-.comment-react { font-size: 10px; font-family: var(--mono); background: transparent; border: none; color: var(--text3); cursor: pointer; padding: .1rem .35rem; border-radius: 4px; transition: all .1s; }
-.comment-react:hover { background: var(--bg3); }
-.comment-react.liked { color: var(--accent); }
-.comment-input-row { display: flex; gap: .5rem; align-items: center; margin-top: .3rem; }
-.comment-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: .4rem .7rem; color: var(--text); font-size: 12px; outline: none; font-family: var(--sans); }
-.comment-input:focus { border-color: var(--accent); }
-.comment-send-btn { background: var(--accent); border: none; border-radius: 8px; padding: .4rem .7rem; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; font-family: var(--mono); white-space: nowrap; }
-.comment-send-btn:hover { background: var(--accent2); }
-.no-comments { font-size: 11px; color: var(--text3); font-family: var(--mono); text-align: center; padding: .25rem 0; }
-
-.compose-type-row { display: flex; gap: .4rem; margin-bottom: .1rem; }
-.compose-type-btn { display: flex; align-items: center; gap: .35rem; padding: .3rem .7rem; border-radius: 20px; background: transparent; border: 1px solid var(--border); color: var(--text3); font-size: 11px; font-weight: 600; font-family: var(--mono); cursor: pointer; transition: all .12s; }
-.compose-type-btn:hover { border-color: var(--border2); color: var(--text); }
-.compose-type-btn.active { background: var(--accentBg); border-color: var(--accent); color: var(--accent); }
-.compose-media-pick-btn { display: flex; align-items: center; gap: .4rem; padding: .45rem .85rem; border-radius: 8px; background: var(--bg3); border: 1px dashed var(--border2); color: var(--text2); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all .12px; align-self: flex-start; }
-.compose-media-pick-btn:hover { border-color: var(--accent); color: var(--accent); }
-.compose-url-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .45rem .75rem; color: var(--text); font-size: 12px; outline: none; font-family: var(--mono); }
-.compose-url-input:focus { border-color: var(--accent); }
-.compose-url-input::placeholder { color: var(--text3); }
-
-/* ── POST MEDIA ── */
-.post-media { display: flex; justify-content: flex-start; align-items: flex-start; padding: 0 0 0.7rem 0; width: 100%; }
-.post-img { width: 70%; max-width: 350px; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 8px; border: 1px solid var(--border2); display: block; background: #000; }
-.post-video { width: 70%; max-width: 350px; aspect-ratio: 16 / 9; border-radius: 8px; border: 1px solid var(--border2); background: black; display: block; }
-.post-yt-wrap { width: 70%; max-width: 350px; aspect-ratio: 16 / 9; border-radius: 8px; border: 1px solid var(--border2); overflow: hidden; background: black; display: block; }
-.post-yt { width: 100%; height: 100%; border: none; display: block; }
-
-/* ── LOAD MORE BUTTON ── */
-.load-more-btn {
-  display: flex; align-items: center; justify-content: center; gap: .5rem;
-  width: 100%; padding: .75rem; background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); color: var(--text3); font-size: 13px; font-family: var(--mono);
-  cursor: pointer; transition: all .15s; margin-top: .25rem;
-}
-.load-more-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accentBg); }
-.load-more-btn:disabled { opacity: .5; cursor: not-allowed; }
-
-/* ── STATUS BAR ── */
-.statusbar { height: 24px; background: var(--bg); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 1rem; gap: .5rem; font-size: 10px; color: var(--text3); font-family: var(--mono); flex-shrink: 0; }
-.status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
-
-/* ── PANELS ── */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200; display: none; backdrop-filter: blur(2px); }
-.overlay.open { display: block; }
-.panel { position: fixed; top: 0; right: 0; width: 360px; height: 100vh; background: var(--bg2); border-left: 1px solid var(--border); z-index: 300; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .22s cubic-bezier(.4,0,.2,1); }
-.panel.open { transform: translateX(0); }
-.panel-head { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-.panel-title { font-size: 15px; font-weight: 700; }
-.panel-body { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .65rem; }
-
-.sec-label { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: .12em; padding: .5rem 0 .2rem; border-top: 1px solid var(--border); margin-top: .25rem; }
-.sec-label:first-child { border-top: none; margin-top: 0; }
-
-.notif-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .85rem 1rem; }
-.notif-card.unread { border-color: var(--accent); background: var(--accentBg); }
-.notif-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
-.notif-text { font-size: 13px; line-height: 1.4; }
-.notif-time { font-size: 10px; color: var(--text3); white-space: nowrap; flex-shrink: 0; font-family: var(--mono); }
-.notif-actions { display: flex; gap: .5rem; margin-top: .6rem; }
-.nact-btn { font-size: 12px; padding: .3rem .75rem; border-radius: 6px; cursor: pointer; border: none; font-family: var(--sans); font-weight: 600; transition: all .12s; }
-.nact-btn.accept  { background: var(--green); color: #000; }
-.nact-btn.accept:hover { opacity: .85; }
-.nact-btn.decline { background: var(--bg4); color: var(--text3); border: 1px solid var(--border); }
-.nact-btn.decline:hover { color: var(--red); }
-
-.friend-row { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .65rem .85rem; display: flex; align-items: center; gap: .7rem; }
-.friend-av { width: 34px; height: 34px; border-radius: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg4); position: relative; }
-.friend-online { position: absolute; bottom: -1px; right: -1px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); border: 1.5px solid var(--bg3); }
-.friend-alias { font-size: 13px; font-weight: 600; }
-.friend-bio { font-size: 11px; color: var(--text3); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
-.badge-chip { font-size: 10px; font-family: var(--mono); background: var(--bg4); border: 1px solid var(--border); border-radius: 20px; padding: .15rem .5rem; color: var(--text3); white-space: nowrap; }
-
-.add-form { display: flex; flex-direction: column; gap: .6rem; }
-.add-form label { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
-.add-form input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .5rem .7rem; color: var(--text); font-size: 13px; outline: none; font-family: var(--mono); }
-.add-form input:focus { border-color: var(--accent); }
-.add-feedback { font-size: 12px; display: none; font-family: var(--mono); }
-
-.profile-header { display: flex; flex-direction: column; align-items: center; gap: .75rem; padding: 1.5rem 1rem 1rem; text-align: center; }
-.profile-big-av { width: 72px; height: 72px; border-radius: 18px; font-size: 36px; display: flex; align-items: center; justify-content: center; background: var(--bg3); border: 2px solid var(--accent); cursor: pointer; transition: transform .15s; }
-.profile-big-av:hover { transform: scale(1.05); }
-.profile-alias { font-size: 20px; font-weight: 700; }
-.profile-username { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-
-.pf-field { display: flex; flex-direction: column; gap: .35rem; }
-.pf-field label { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
-.pf-field input, .pf-field textarea { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .55rem .75rem; color: var(--text); font-size: 13px; outline: none; font-family: var(--sans); width: 100%; }
-.pf-field input:focus, .pf-field textarea:focus { border-color: var(--accent); }
-.pf-field textarea { resize: none; height: 64px; font-size: 13px; }
-
-.color-swatches { display: flex; gap: .4rem; flex-wrap: wrap; }
-.color-swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .12s, border-color .12s; }
-.color-swatch:hover { transform: scale(1.15); }
-.color-swatch.selected { border-color: var(--text); }
-
-.emoji-grid { display: flex; gap: .4rem; flex-wrap: wrap; }
-.emoji-opt { width: 34px; height: 34px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: background .12s, border-color .12s; }
-.emoji-opt:hover { background: var(--bg4); }
-.emoji-opt.selected { border-color: var(--accent); background: var(--accentBg); }
-
-.toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: .75rem 1rem; font-size: 13px; font-family: var(--mono); box-shadow: 0 8px 32px rgba(0,0,0,.5); z-index: 9999; display: flex; align-items: center; gap: .5rem; transform: translateY(20px); opacity: 0; transition: all .25s ease; pointer-events: none; }
-.toast.show { transform: translateY(0); opacity: 1; }
-.toast.msg-notif { border-color: var(--accent); }
-
-/* ── HUB VIEW ── */
-#hub-view { background: var(--bg); }
-.hub-tabs { display: flex; padding: .6rem 1rem; gap: .5rem; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
-.hub-tab-btn { padding: .35rem .85rem; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; transition: all .15s; font-family: var(--mono); }
-.hub-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.hub-scroll { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-
-/* ── LEADERBOARD ── */
-.lb-top-post { background: linear-gradient(135deg, rgba(245,197,24,.08), rgba(91,127,255,.06)); border: 1px solid rgba(245,197,24,.25); border-radius: var(--rLg); padding: 1rem; }
-.lb-top-post-label { font-size: 10px; font-family: var(--mono); color: var(--yellow); text-transform: uppercase; letter-spacing: .12em; margin-bottom: .5rem; display: flex; align-items: center; gap: .4rem; }
-.lb-top-post-text { font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: .4rem; }
-.lb-top-post-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-.lb-table { display: flex; flex-direction: column; gap: .4rem; }
-.lb-row { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: .7rem .9rem; display: flex; align-items: center; gap: .75rem; position: relative; overflow: hidden; transition: border-color .15s; }
-.lb-row:hover { border-color: var(--border2); }
-.lb-row.rank-1 { border-color: rgba(245,197,24,.4); background: linear-gradient(90deg, rgba(245,197,24,.06), transparent); }
-.lb-row.rank-2 { border-color: rgba(192,192,192,.3); background: linear-gradient(90deg, rgba(192,192,192,.04), transparent); }
-.lb-row.rank-3 { border-color: rgba(205,127,50,.3); background: linear-gradient(90deg, rgba(205,127,50,.04), transparent); }
-.lb-rank { font-family: var(--mono); font-size: 12px; color: var(--text3); min-width: 22px; text-align: center; font-weight: 700; }
-.lb-rank.gold   { color: var(--yellow); }
-.lb-rank.silver { color: #c0c0c0; }
-.lb-rank.bronze { color: #cd7f32; }
-.lb-av { width: 36px; height: 36px; border-radius: 10px; font-size: 18px; display: flex; align-items: center; justify-content: center; background: var(--bg3); border: 1.5px solid transparent; flex-shrink: 0; }
-.lb-info { flex: 1; min-width: 0; }
-.lb-name { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-.lb-stats { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 2px; display: flex; gap: .75rem; }
-.lb-stat { display: flex; align-items: center; gap: .25rem; }
-.badge-inline { display: inline-flex; align-items: center; gap: .2rem; font-size: 10px; font-family: var(--mono); border-radius: 20px; padding: .1rem .4rem; border: 1px solid; white-space: nowrap; }
-
-/* ── CHANGELOG ── */
-.cl-entry { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rLg); overflow: hidden; }
-.cl-header { padding: .8rem 1rem; display: flex; align-items: flex-start; gap: .75rem; }
-.cl-tag-chip { font-size: 10px; font-family: var(--mono); border-radius: 6px; padding: .15rem .5rem; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
-.cl-tag-feature     { background: rgba(91,127,255,.15); color: var(--accent); border: 1px solid rgba(91,127,255,.3); }
-.cl-tag-fix         { background: rgba(255,77,106,.1);  color: var(--red);    border: 1px solid rgba(255,77,106,.25); }
-.cl-tag-improvement { background: rgba(46,204,138,.1);  color: var(--green);  border: 1px solid rgba(46,204,138,.25); }
-.cl-tag-upcoming    { background: rgba(245,197,24,.1);  color: var(--yellow); border: 1px solid rgba(245,197,24,.25); }
-.cl-title { font-size: 14px; font-weight: 700; flex: 1; }
-.cl-version { font-size: 10px; font-family: var(--mono); color: var(--accent); background: var(--accentBg); border: 1px solid rgba(91,127,255,.2); border-radius: 6px; padding: .1rem .45rem; }
-.cl-body { padding: .1rem 1rem .85rem; font-size: 13px; color: var(--text2); line-height: 1.6; }
-.cl-time { font-size: 10px; color: var(--text3); font-family: var(--mono); padding: 0 1rem .65rem; }
-
-.admin-compose { background: var(--bg2); border: 1px dashed var(--border2); border-radius: var(--rLg); padding: 1rem; display: flex; flex-direction: column; gap: .65rem; }
-.admin-compose-title { font-size: 11px; font-family: var(--mono); color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
-.admin-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .5rem .75rem; color: var(--text); font-size: 13px; outline: none; font-family: var(--sans); }
-.admin-input:focus { border-color: var(--accent); }
-.admin-select { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .5rem .75rem; color: var(--text); font-size: 13px; outline: none; font-family: var(--mono); }
-.admin-select:focus { border-color: var(--accent); }
-.admin-row { display: flex; gap: .5rem; }
-
-/* ── POLLS ── */
-.poll-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rLg); padding: 1rem; display: flex; flex-direction: column; gap: .75rem; }
-.poll-question { font-size: 14px; font-weight: 700; line-height: 1.4; }
-.poll-option { display: flex; flex-direction: column; gap: .2rem; cursor: pointer; }
-.poll-option-btn { display: flex; align-items: center; gap: .65rem; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .75rem; font-size: 13px; color: var(--text); cursor: pointer; transition: all .12s; text-align: left; font-family: var(--sans); position: relative; overflow: hidden; }
-.poll-option-btn:hover { border-color: var(--border2); }
-.poll-option-btn.voted { border-color: var(--accent); color: var(--accent); }
-.poll-option-btn.winner { border-color: var(--green); }
-.poll-bar { position: absolute; inset: 0; border-radius: 8px; opacity: .13; pointer-events: none; transition: width .4s ease; }
-.poll-bar-fill { height: 100%; border-radius: 8px; background: var(--accent); }
-.poll-pct { font-size: 10px; font-family: var(--mono); color: var(--text3); margin-left: auto; white-space: nowrap; z-index: 1; }
-.poll-opt-label { z-index: 1; flex: 1; }
-.poll-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text3); font-family: var(--mono); }
-.poll-closed-chip { background: rgba(255,77,106,.1); color: var(--red); border: 1px solid rgba(255,77,106,.2); border-radius: 20px; padding: .1rem .5rem; font-size: 10px; }
-.poll-open-chip   { background: rgba(46,204,138,.1); color: var(--green); border: 1px solid rgba(46,204,138,.2); border-radius: 20px; padding: .1rem .5rem; font-size: 10px; }
-.admin-close-btn { font-size: 10px; font-family: var(--mono); background: transparent; border: none; color: var(--text3); cursor: pointer; padding: .1rem .35rem; border-radius: 4px; }
-.admin-close-btn:hover { color: var(--red); background: rgba(255,77,106,.1); }
-
-/* ── IDEAS ── */
-.idea-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: .8rem 1rem; display: flex; gap: .75rem; align-items: flex-start; transition: border-color .12s; }
-.idea-card:hover { border-color: var(--border2); }
-.idea-vote-col { display: flex; flex-direction: column; align-items: center; gap: .2rem; flex-shrink: 0; }
-.idea-vote-btn { width: 34px; height: 34px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; transition: all .12s; color: var(--text3); }
-.idea-vote-btn:hover { border-color: var(--accent); color: var(--accent); }
-.idea-vote-btn.voted { background: var(--accentBg); border-color: var(--accent); color: var(--accent); }
-.idea-vote-count { font-size: 11px; font-family: var(--mono); font-weight: 700; color: var(--text2); }
-.idea-body { flex: 1; min-width: 0; }
-.idea-text { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: .3rem; }
-.idea-meta { font-size: 10px; color: var(--text3); font-family: var(--mono); display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-.idea-author-tag { display: inline-flex; align-items: center; gap: .25rem; }
-.idea-del-btn { font-size: 10px; font-family: var(--mono); background: transparent; border: none; color: var(--text3); cursor: pointer; margin-left: auto; padding: .1rem .35rem; border-radius: 4px; }
-.idea-del-btn:hover { color: var(--red); background: rgba(255,77,106,.1); }
-.idea-submit-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rLg); padding: .9rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
-.idea-submit-label { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: .12em; }
-.idea-submit-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); padding: .6rem .85rem; color: var(--text); font-size: 14px; outline: none; font-family: var(--sans); resize: none; min-height: 70px; max-height: 120px; line-height: 1.5; }
-.idea-submit-input:focus { border-color: var(--accent); }
-.idea-submit-input::placeholder { color: var(--text3); }
-.idea-submit-footer { display: flex; align-items: center; justify-content: space-between; }
-.idea-submit-hint { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-.idea-submit-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: .4rem 1rem; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: var(--sans); }
-.idea-submit-btn:hover { background: var(--accent2); }
-.idea-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
-.idea-note { font-size: 11px; color: var(--text3); font-family: var(--mono); background: var(--bg3); border-radius: 6px; padding: .4rem .65rem; border: 1px solid var(--border); }
-.hub-empty { text-align: center; color: var(--text3); font-size: 12px; font-family: var(--mono); padding: 2rem 0; }
-
-/* ── USER PROFILE POPUP ── */
-.user-popup-overlay {
-  position: fixed; inset: 0; z-index: 500;
-  background: rgba(0,0,0,.55); backdrop-filter: blur(3px);
-  display: none; align-items: center; justify-content: center;
-}
-.user-popup-overlay.open { display: flex; }
-.user-popup-card {
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: var(--rLg); width: 320px; max-width: calc(100vw - 2rem);
-  box-shadow: 0 24px 64px rgba(0,0,0,.75); overflow: hidden;
-  animation: popIn .15s cubic-bezier(.4,0,.2,1);
-}
-@keyframes popIn { from { transform: scale(.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.user-popup-banner { height: 68px; }
-.user-popup-avatar-row {
-  display: flex; align-items: flex-end; justify-content: space-between;
-  padding: 0 1.1rem; margin-top: -30px; margin-bottom: .75rem;
-}
-.user-popup-av {
-  width: 58px; height: 58px; border-radius: 14px; font-size: 28px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--bg3); border: 3px solid var(--bg2);
-  position: relative; flex-shrink: 0;
-}
-.user-popup-online-ring {
-  position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px;
-  border-radius: 50%; background: var(--green); border: 2.5px solid var(--bg2); display: none;
-}
-.user-popup-online-ring.visible { display: block; }
-.user-popup-action-row { display: flex; gap: .4rem; align-items: center; }
-.user-popup-add-btn {
-  background: var(--accent); color: #fff; border: none;
-  border-radius: 8px; padding: .4rem .9rem; font-size: 11px;
-  font-weight: 700; font-family: var(--mono); cursor: pointer;
-  transition: all .15s; letter-spacing: .04em; white-space: nowrap;
-}
-.user-popup-add-btn:hover { background: var(--accent2); }
-.user-popup-add-btn.friends { background: transparent; color: var(--green); border: 1px solid rgba(46,204,138,.35); }
-.user-popup-add-btn.friends:hover { background: rgba(255,77,106,.08); color: var(--red); border-color: rgba(255,77,106,.3); }
-.user-popup-add-btn.pending { background: transparent; color: var(--text3); border: 1px solid var(--border); cursor: default; opacity: .7; }
-.user-popup-msg-btn {
-  background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
-  border-radius: 8px; padding: .4rem .75rem; font-size: 11px;
-  font-weight: 700; font-family: var(--mono); cursor: pointer;
-  transition: all .15s; display: none; align-items: center; gap: .3rem; white-space: nowrap;
-}
-.user-popup-msg-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
-.user-popup-body { padding: 0 1.1rem 1.1rem; }
-.user-popup-name-row { display: flex; align-items: center; gap: .45rem; margin-bottom: .1rem; flex-wrap: wrap; }
-.user-popup-alias { font-size: 17px; font-weight: 700; }
-.user-popup-online-label { font-size: 10px; font-family: var(--mono); color: var(--green); }
-.user-popup-offline-label { font-size: 10px; font-family: var(--mono); color: var(--text3); }
-.user-popup-bio { font-size: 13px; color: var(--text2); margin: .35rem 0 .6rem; font-family: var(--sans); line-height: 1.5; }
-.user-popup-divider { border: none; border-top: 1px solid var(--border); margin: .6rem 0; }
-.user-popup-meta { display: flex; align-items: center; gap: .35rem; font-size: 11px; color: var(--text3); font-family: var(--mono); flex-wrap: wrap; margin-bottom: .5rem; }
-.user-popup-stat { display: flex; align-items: center; gap: .2rem; }
-.user-popup-dot { width: 2px; height: 2px; border-radius: 50%; background: var(--text3); }
-.user-popup-badges { display: flex; flex-wrap: wrap; gap: .3rem; }
-.user-popup-badge {
-  display: inline-flex; align-items: center; gap: .25rem;
-  font-size: 10px; font-family: var(--mono); border-radius: 20px;
-  padding: .15rem .5rem; border: 1px solid; white-space: nowrap;
-}
-.user-popup-close {
-  position: absolute; top: .65rem; right: .65rem;
-  background: rgba(0,0,0,.35); border: none; color: #fff; border-radius: 50%;
-  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
-  font-size: 13px; cursor: pointer; transition: background .12s; font-family: var(--mono);
-  z-index: 10;
-}
-.user-popup-close:hover { background: rgba(0,0,0,.6); }
-.user-popup-inner { position: relative; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -562,8 +18,7 @@ input, textarea { font-family: var(--sans); }
 <!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-logo">netbound</div>
-  <div class="auth-tag">// Created by - Michael Volpe <br>
-  Currently Not Working</div>
+  <div class="auth-tag">// Created by - Michael Volpe</div>
   <div class="auth-card">
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchTab('login')">Sign in</button>
@@ -705,6 +160,10 @@ input, textarea { font-family: var(--sans); }
             <button class="compose-post-btn" id="compose-btn" onclick="submitPost()">Post</button>
           </div>
         </div>
+        <div class="feed-refresh-bar">
+          <span id="feed-last-updated">—</span>
+          <button class="feed-refresh-btn" onclick="refreshFeed()">↻ Refresh</button>
+        </div>
         <div id="feed-list"><div class="hub-empty">loading feed…</div></div>
       </div>
     </div>
@@ -785,32 +244,20 @@ input, textarea { font-family: var(--sans); }
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script type="importmap">{ "imports": { "convex/browser": "https://esm.sh/convex@1.17.4/browser" } }</script>
+<script type="importmap">{ "imports": { "convex/browser": "https://esm.sh/convex@1.37.0/browser" } }</script>
 <script type="module">
 import { ConvexClient } from "convex/browser";
 
-const CONVEX_URL = "https://cheerful-sturgeon-267.convex.cloud";
+// ─────────────────────────────────────────────
+//  BANDWIDTH STRATEGY
+//  REAL-TIME (onUpdate):  messages, conv list, unread msg count
+//  POLLED (query + setInterval):  feed (60s), hub tabs (90s),
+//                                  notif badge (45s), user count (120s)
+//  ON-DEMAND (query):  panel data fetched only when panel opens
+//  HEARTBEAT:  every 3 min (was every 60s)
+// ─────────────────────────────────────────────
 
-// ══════════════════════════════════════════════════════════════
-// BANDWIDTH OPTIMIZATION — KEY DECISIONS:
-//
-// LIVE subscriptions (onUpdate) — ONLY 3, all lightweight:
-//   • getMessages        — active chat only (small payloads)
-//   • getUnreadCount     — single integer
-//   • getInboxRequests   — friend requests only
-//
-// ONE-TIME queries (client.query) with manual polling:
-//   • getConversationPreviews — polled every 15s (DM sidebar)
-//   • getNotifications (activity) — polled every 30s
-//   • getFeed/getTrending — polled every 60s (was live = 12GB!)
-//   • getLeaderboard — polled every 120s (was live = 9GB!)
-//   • getChangelog/getPolls/getIdeas — polled every 60s
-//   • getTotalUserCount — polled every 5 min
-//
-// PAGINATION: Feed loads 10 posts at a time, "View More" fetches next 10
-// ══════════════════════════════════════════════════════════════
-
-const PAGE_SIZE = 10;
+const CONVEX_URL = "https://uncommon-salamander-370.convex.cloud";
 
 // ── STATE ──
 let client;
@@ -820,38 +267,31 @@ let currentConv = null;
 let convListData = [];
 let isAdmin = false;
 
-// Live subscription unsubs (only 3!)
-let messageUnsub = null;
-let unreadMsgUnsub = null;
-let friendReqUnsub = null;
-
-// Poll intervals
-let convPreviewInterval = null;
-let activityNotifInterval = null;
-let userCountInterval = null;
-let feedInterval = null;
-let hubInterval = null;
+// All onUpdate subscriptions — killed/revived on tab visibility changes
+let messageUnsub = null, convUnsub = null, unreadMsgUnsub = null;
+let feedUnsub = null, notifUnsub = null, userCountUnsub = null, hubUnsub = null;
 let heartbeatInterval = null;
 
-// Cached data (populated by polls)
-let cachedFriendReqs = [];
-let cachedActivityNotifs = [];
+// Feed pagination
+const FEED_PAGE_SIZE = 10;
+let feedAllPosts = [];
+let feedShownCount = FEED_PAGE_SIZE;
+
 let prevUnreadMsgCount = 0;
-
-// Feed state
-let allFeedPosts = [];
-let feedVisibleCount = PAGE_SIZE;
 let currentFeedTab = 'new';
+let currentHubTab  = 'leaderboard';
 let openCommentPostId = null;
-let composeMediaType = 'text';
-let composeImageData = null;
+let composeMediaType  = 'text';
+let composeImageData  = null;
 
-// Hub state
-let currentHubTab = 'leaderboard';
+// Cached notif data
+let cachedFriendReqs       = [];
+let cachedActivityNotifs   = [];
+let prevActivityNotifCount = 0;
 
 // User popup state
 let popupTargetUsername = null;
-let popupFriendStatus = null;
+let popupFriendStatus   = null;
 
 // ── UTILS ──
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -881,15 +321,15 @@ function showToast(msg, isMsg = false) {
   toastTimeout = setTimeout(() => { t.className = 'toast'; }, 3500);
 }
 
+// Expose globals
 Object.assign(window, {
   switchTab, doLogin, doRegister, doLogout, openPanel, closeAllPanels,
   openConv, sendMsg, handleKey, autoResize, filterConvs,
   acceptReq, declineReq, addByAlias, quickAdd, removeFriend,
   saveProfile, selectColor, selectEmoji,
-  switchMainTab, switchFeedTab, submitPost, updateComposeCount,
+  switchMainTab, switchFeedTab, submitPost, updateComposeCount, refreshFeed, showMoreFeed,
   reactToPost, toggleComments, submitComment, reactToComment, deletePost, deleteComment,
   setComposeMedia, triggerImagePick, handleImageFile,
-  loadMorePosts,
   switchHubTab,
   voteOnPoll, closePoll, deletePoll,
   voteOnIdea, submitIdea, deleteIdea,
@@ -990,80 +430,91 @@ async function bootApp() {
   show('app-screen');
   try { isAdmin = await client.query("hub:getIsAdmin", { token: sessionToken }); } catch(e){}
 
-  // ── LIVE SUBSCRIPTIONS (only 3 lightweight ones) ──
-  subscribeUnreadMsgs();    // single integer — tiny
-  subscribeFriendReqs();    // friend requests — small, important
+  // ── ALL REAL-TIME: onUpdate subscriptions ──
+  subscribeConvList();
+  subscribeUnreadMsgs();
+  subscribeNotifBadge();
+  subscribeUserCount();
+  startHeartbeat();
 
-  // ── POLLED DATA ──
-  startConvPreviewPolling(); // every 15s
-  startActivityNotifPolling(); // every 30s
-  startUserCountPolling();   // every 5 min
-  startHeartbeat();          // every 60s
+  // Pause subs when tab is hidden, resume when visible
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      pauseNonEssentialSubs();
+    } else {
+      resumeNonEssentialSubs();
+    }
+  });
+}
+
+function pauseNonEssentialSubs() {
+  if (feedUnsub)      { feedUnsub();      feedUnsub      = null; }
+  if (hubUnsub)       { hubUnsub();       hubUnsub       = null; }
+  if (notifUnsub)     { notifUnsub();     notifUnsub     = null; }
+  if (userCountUnsub) { userCountUnsub(); userCountUnsub = null; }
+}
+
+function resumeNonEssentialSubs() {
+  subscribeNotifBadge();
+  subscribeUserCount();
+  // Only re-subscribe feed/hub if those tabs are active
+  const activeTab = document.querySelector('.tab-btn.active')?.id?.replace('tab-','');
+  if (activeTab === 'feed') subscribeFeed();
+  if (activeTab === 'hub')  subscribeHub();
 }
 
 function teardown() {
-  [messageUnsub, unreadMsgUnsub, friendReqUnsub].forEach(u => u && u());
-  [convPreviewInterval, activityNotifInterval, userCountInterval,
-   feedInterval, hubInterval, heartbeatInterval].forEach(i => i && clearInterval(i));
-  messageUnsub = unreadMsgUnsub = friendReqUnsub = null;
-  convPreviewInterval = activityNotifInterval = userCountInterval =
-  feedInterval = hubInterval = heartbeatInterval = null;
+  if (messageUnsub)   { messageUnsub();   messageUnsub   = null; }
+  if (convUnsub)      { convUnsub();      convUnsub      = null; }
+  if (unreadMsgUnsub) { unreadMsgUnsub(); unreadMsgUnsub = null; }
+  pauseNonEssentialSubs();
+  clearInterval(heartbeatInterval); heartbeatInterval = null;
 }
 
-// ── HEARTBEAT ──
+// ── HEARTBEAT (3 min) ──
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
   client.mutation("auth:heartbeat", { token: sessionToken }).catch(()=>{});
   heartbeatInterval = setInterval(() => {
     client.mutation("auth:heartbeat", { token: sessionToken }).catch(()=>{});
-  }, 60000);
+  }, INTERVAL_HEARTBEAT);
 }
 
-// ── USER COUNT — polled every 5 min ──
-function startUserCountPolling() {
-  if (userCountInterval) clearInterval(userCountInterval);
-  async function fetchCount() {
-    try {
-      const count = await client.query("auth:getTotalUserCount", {});
-      if (count !== undefined) document.getElementById('user-count-num').textContent = count;
-    } catch(e) {}
-  }
-  fetchCount();
-  userCountInterval = setInterval(fetchCount, 5 * 60 * 1000);
+// ── USER COUNT (real-time subscription) ──
+function subscribeUserCount() {
+  if (userCountUnsub) return;
+  userCountUnsub = client.onUpdate("auth:getTotalUserCount", {}, (count) => {
+    if (count !== undefined) document.getElementById('user-count-num').textContent = count;
+  });
 }
 
-// ── CONV PREVIEW — polled every 15s (was live subscription) ──
-function startConvPreviewPolling() {
-  if (convPreviewInterval) clearInterval(convPreviewInterval);
-  async function fetchPreviews() {
-    try {
-      const data = await client.query("messages:getConversationPreviews", { token: sessionToken });
-      if (data) { convListData = data; renderConvList(); }
-    } catch(e) {}
-  }
-  fetchPreviews();
-  convPreviewInterval = setInterval(fetchPreviews, 15000);
+// ── NOTIF BADGE (real-time subscription) ──
+function subscribeNotifBadge() {
+  if (notifUnsub) return;
+  // Subscribe to activity notifications
+  notifUnsub = client.onUpdate("posts:getNotifications", { token: sessionToken }, (notifs) => {
+    cachedActivityNotifs = notifs || [];
+    const newUnread = cachedActivityNotifs.filter(n=>!n.read).length;
+    if (newUnread > prevActivityNotifCount) {
+      const newest = [...cachedActivityNotifs].sort((a,b)=>b.createdAt-a.createdAt).find(n=>!n.read);
+      if (newest) showToast(notifLabel(newest, false));
+    }
+    prevActivityNotifCount = newUnread;
+    updateNotifBadge();
+    if (document.getElementById('notifs-panel').classList.contains('open')) renderNotifsPanel();
+  });
+  // Also keep friend requests updated (one-off query on open is fine, but subscribe for badge)
+  client.onUpdate("friends:getInboxRequests", { token: sessionToken }, (reqs) => {
+    cachedFriendReqs = reqs || [];
+    updateNotifBadge();
+  });
 }
 
-// ── ACTIVITY NOTIFS — polled every 30s (was live subscription) ──
-function startActivityNotifPolling() {
-  if (activityNotifInterval) clearInterval(activityNotifInterval);
-  async function fetchNotifs() {
-    try {
-      const notifs = await client.query("posts:getNotifications", { token: sessionToken });
-      if (!notifs) return;
-      const newUnread = notifs.filter(n => !n.read).length;
-      if (newUnread > cachedActivityNotifs.filter(n => !n.read).length) {
-        const newest = [...notifs].sort((a,b) => b.createdAt-a.createdAt).find(n => !n.read);
-        if (newest) showToast(notifLabel(newest, false));
-      }
-      cachedActivityNotifs = notifs;
-      updateNotifBadge();
-      if (document.getElementById('notifs-panel').classList.contains('open')) renderNotifsPanel();
-    } catch(e) {}
-  }
-  fetchNotifs();
-  activityNotifInterval = setInterval(fetchNotifs, 30000);
+function updateNotifBadge() {
+  const total = cachedFriendReqs.filter(r=>r.status==='pending').length
+              + cachedActivityNotifs.filter(n=>!n.read).length;
+  const badge = document.getElementById('notif-badge');
+  badge.textContent = total; badge.style.display = total > 0 ? 'flex' : 'none';
 }
 
 // ── MAIN TAB SWITCHING ──
@@ -1072,80 +523,60 @@ function switchMainTab(tab) {
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
     document.getElementById(`${t}-view`).classList.toggle('active', t === tab);
   });
-  if (tab === 'feed') startFeedPolling();
-  else stopFeedPolling();
-  if (tab === 'hub') startHubPolling();
-  else stopHubPolling();
+
+  // Unsubscribe from feed/hub when leaving those tabs (save bandwidth)
+  if (tab !== 'feed' && feedUnsub) { feedUnsub(); feedUnsub = null; }
+  if (tab !== 'hub'  && hubUnsub)  { hubUnsub();  hubUnsub  = null; }
+
+  if (tab === 'feed') subscribeFeed();
+  if (tab === 'hub')  subscribeHub();
 }
 
-// ── FEED POLLING — 60s while visible (was live = 12GB wasted!) ──
-function startFeedPolling() {
-  stopFeedPolling();
-  loadFeedOnce();
-  feedInterval = setInterval(loadFeedOnce, 60000);
+// ── FEED SUBSCRIPTION (real-time, only active on feed tab) ──
+function subscribeFeed() {
+  if (feedUnsub) return; // already subscribed
+  feedShownCount = FEED_PAGE_SIZE; // reset pagination
+  const endpoint = currentFeedTab === 'trending' ? "posts:getTrending" : "posts:getFeed";
+  feedUnsub = client.onUpdate(endpoint, { token: sessionToken }, (posts) => {
+    feedAllPosts = posts || [];
+    renderFeed();
+    document.getElementById('feed-last-updated').textContent =
+      'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  });
 }
-function stopFeedPolling() {
-  if (feedInterval) { clearInterval(feedInterval); feedInterval = null; }
+
+function refreshFeed() {
+  // Unsubscribe and resubscribe to force a fresh pull (e.g. after switching feed tabs)
+  if (feedUnsub) { feedUnsub(); feedUnsub = null; }
+  subscribeFeed();
 }
 
 function switchFeedTab(tab) {
   currentFeedTab = tab;
-  feedVisibleCount = PAGE_SIZE;
-  allFeedPosts = [];
   document.querySelectorAll('.feed-tab-btn').forEach((b, i) => {
     b.classList.toggle('active', (i===0 && tab==='new') || (i===1 && tab==='trending'));
   });
-  loadFeedOnce();
+  refreshFeed(); // unsubscribes old endpoint, subscribes new one
 }
 
-async function loadFeedOnce() {
-  const endpoint = currentFeedTab === 'trending' ? "posts:getTrending" : "posts:getFeed";
-  try {
-    const posts = await client.query(endpoint, { token: sessionToken });
-    if (posts) {
-      allFeedPosts = posts;
-      renderFeedPage();
-    }
-  } catch(e) {}
-}
-
-function renderFeedPage() {
+function renderFeed() {
   const list = document.getElementById('feed-list');
-  if (!allFeedPosts || allFeedPosts.length === 0) {
+  if (!feedAllPosts || feedAllPosts.length === 0) {
     list.innerHTML = '<div class="hub-empty">nothing here yet — be first to post!</div>';
     return;
   }
-  const visible = allFeedPosts.slice(0, feedVisibleCount);
+  const visible = feedAllPosts.slice(0, feedShownCount);
   let html = visible.map(p => renderPostCard(p)).join('');
-
-  if (feedVisibleCount < allFeedPosts.length) {
-    const remaining = allFeedPosts.length - feedVisibleCount;
-    html += `<button class="load-more-btn" id="load-more-btn" onclick="loadMorePosts()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-      View more (${remaining} remaining)
-    </button>`;
-  } else if (allFeedPosts.length > PAGE_SIZE) {
-    html += `<div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono);padding:.75rem">all ${allFeedPosts.length} posts loaded</div>`;
+  if (feedAllPosts.length > feedShownCount) {
+    const remaining = feedAllPosts.length - feedShownCount;
+    html += `<button class="show-more-btn" onclick="showMoreFeed()">Show ${Math.min(remaining, FEED_PAGE_SIZE)} more posts</button>`;
   }
-
   list.innerHTML = html;
-
-  // Re-open comments section if one was open
-  if (openCommentPostId) {
-    const section = document.getElementById(`comments-${openCommentPostId}`);
-    if (section) {
-      section.classList.add('open');
-      loadComments(openCommentPostId);
-    }
-  }
 }
 
-function loadMorePosts() {
-  feedVisibleCount += PAGE_SIZE;
-  renderFeedPage();
-  // Scroll to where the new posts begin
-  const btn = document.getElementById('load-more-btn');
-  if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function showMoreFeed() {
+  feedShownCount = Math.min(feedShownCount + FEED_PAGE_SIZE, feedAllPosts.length);
+  renderFeed();
 }
 
 function renderPostCard(p) {
@@ -1161,9 +592,11 @@ function renderPostCard(p) {
   } else if (p.type === 'video' && p.mediaUrl) {
     const ytMatch = p.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) mediaHtml = `<div class="post-media"><div class="post-yt-wrap"><iframe src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen class="post-yt"></iframe></div></div>`;
-    else mediaHtml = `<div class="post-media"><video src="${esc(p.mediaUrl)}" controls class="post-video" preload="metadata"></video></div>`;
+    else         mediaHtml = `<div class="post-media"><video src="${esc(p.mediaUrl)}" controls class="post-video" preload="metadata"></video></div>`;
   }
-  const avClick = p.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(p.authorUsername)}')"`;
+  const avClick = p.isMe
+    ? `onclick="openPanel('profile')"`
+    : `onclick="showUserProfile('${esc(p.authorUsername)}')"`;
   return `<div class="post-card" id="post-${p._id}">
     <div class="post-header">
       <div class="post-av" style="border-color:${p.color};cursor:pointer" ${avClick}>${p.emoji}</div>
@@ -1192,8 +625,7 @@ function renderPostCard(p) {
     <div class="comments-section ${commentsOpen}" id="comments-${p._id}">
       <div id="comments-list-${p._id}"><div class="no-comments">loading…</div></div>
       <div class="comment-input-row">
-        <input class="comment-input" id="comment-input-${p._id}" placeholder="add a comment…"
-          onkeydown="if(event.key==='Enter'){submitComment('${p._id}');event.preventDefault();}">
+        <input class="comment-input" id="comment-input-${p._id}" placeholder="add a comment…" onkeydown="if(event.key==='Enter'){submitComment('${p._id}');event.preventDefault();}">
         <button class="comment-send-btn" onclick="submitComment('${p._id}')">send</button>
       </div>
     </div>
@@ -1203,24 +635,23 @@ function renderPostCard(p) {
 async function reactToPost(postId, reaction) {
   try {
     await client.mutation("posts:reactToPost", { token: sessionToken, postId, reaction });
-    await loadFeedOnce();
-  } catch(e) {}
+    // onUpdate subscription will automatically re-render the feed
+  } catch(e){}
 }
+
 async function deletePost(postId) {
   if (!confirm('Delete this post?')) return;
   try {
     await client.mutation("posts:deletePost", { token: sessionToken, postId });
-    allFeedPosts = allFeedPosts.filter(p => p._id !== postId);
-    renderFeedPage();
-  } catch(e) {}
+    // onUpdate subscription will automatically re-render the feed
+  } catch(e){}
 }
 
 function toggleComments(postId) {
   const section = document.getElementById(`comments-${postId}`);
-  const isOpen = section.classList.contains('open');
-  if (openCommentPostId && openCommentPostId !== postId) {
+  const isOpen  = section.classList.contains('open');
+  if (openCommentPostId && openCommentPostId !== postId)
     document.getElementById(`comments-${openCommentPostId}`)?.classList.remove('open');
-  }
   if (isOpen) { section.classList.remove('open'); openCommentPostId = null; }
   else { section.classList.add('open'); openCommentPostId = postId; loadComments(postId); }
 }
@@ -1240,10 +671,12 @@ function renderComments(postId, comments) {
   if (!comments || comments.length === 0) { listEl.innerHTML = '<div class="no-comments">no comments yet</div>'; return; }
   listEl.innerHTML = comments.map(c => {
     const likedClass = c.myReaction === 'like' ? 'liked' : '';
-    const deleteBtn = (c.isMe || isAdmin)
+    const deleteBtn  = (c.isMe || isAdmin)
       ? `<button class="comment-react" onclick="deleteComment('${c._id}','${postId}')" style="color:var(--red)">✕</button>`
       : '';
-    const avClick = c.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(c.authorUsername)}')"`;
+    const avClick = c.isMe
+      ? `onclick="openPanel('profile')"`
+      : `onclick="showUserProfile('${esc(c.authorUsername)}')"`;
     return `<div class="comment-row">
       <div class="comment-av" style="border-color:${c.color};cursor:pointer" ${avClick}>${c.emoji}</div>
       <div class="comment-content">
@@ -1263,24 +696,13 @@ async function submitComment(postId) {
   const input = document.getElementById(`comment-input-${postId}`);
   const text = input.value.trim(); if (!text) return;
   input.value = '';
-  try {
-    await client.mutation("posts:addComment", { token: sessionToken, postId, text });
-    await loadComments(postId);
-    await loadFeedOnce();
-  } catch(e) {}
+  try { await client.mutation("posts:addComment", { token: sessionToken, postId, text }); await loadComments(postId); } catch(e){}
 }
 async function deleteComment(commentId, postId) {
-  try {
-    await client.mutation("posts:deleteComment", { token: sessionToken, commentId });
-    await loadComments(postId);
-    await loadFeedOnce();
-  } catch(e) {}
+  try { await client.mutation("posts:deleteComment", { token: sessionToken, commentId }); await loadComments(postId); } catch(e){}
 }
 async function reactToComment(commentId, postId, reaction) {
-  try {
-    await client.mutation("posts:reactToComment", { token: sessionToken, commentId, reaction });
-    await loadComments(postId);
-  } catch(e) {}
+  try { await client.mutation("posts:reactToComment", { token: sessionToken, commentId, reaction }); await loadComments(postId); } catch(e){}
 }
 
 function updateComposeCount() {
@@ -1290,8 +712,7 @@ function updateComposeCount() {
 function setComposeMedia(type) {
   composeMediaType = type; composeImageData = null;
   document.querySelectorAll('.compose-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
-  const imgRow = document.getElementById('compose-img-row');
-  const vidRow = document.getElementById('compose-vid-row');
+  const imgRow = document.getElementById('compose-img-row'), vidRow = document.getElementById('compose-vid-row');
   if (imgRow) imgRow.style.display = type === 'image' ? 'flex' : 'none';
   if (vidRow) vidRow.style.display = type === 'video' ? 'flex' : 'none';
   const preview = document.getElementById('compose-img-preview');
@@ -1312,11 +733,11 @@ function handleImageFile(input) {
   reader.readAsDataURL(file);
 }
 async function submitPost() {
-  const text = document.getElementById('compose-input').value.trim();
+  const text   = document.getElementById('compose-input').value.trim();
   const vidUrl = document.getElementById('compose-vid-url')?.value.trim();
-  if (composeMediaType === 'text' && !text) return;
+  if (composeMediaType === 'text'  && !text)           return;
   if (composeMediaType === 'image' && !composeImageData) { showToast('Pick an image first'); return; }
-  if (composeMediaType === 'video' && !vidUrl) { showToast('Paste a video URL first'); return; }
+  if (composeMediaType === 'video' && !vidUrl)           { showToast('Paste a video URL first'); return; }
   const btn = document.getElementById('compose-btn');
   btn.disabled = true; btn.textContent = 'posting…';
   try {
@@ -1326,31 +747,35 @@ async function submitPost() {
     await client.mutation("posts:createPost", payload);
     document.getElementById('compose-input').value = '';
     document.getElementById('compose-count').textContent = '0 / 500';
-    composeImageData = null;
-    setComposeMedia('text');
-    feedVisibleCount = PAGE_SIZE;
-    await loadFeedOnce();
+    composeImageData = null; setComposeMedia('text');
+    // onUpdate subscription will automatically show the new post
   } catch(e) { showToast('Failed to post'); }
   finally { btn.disabled = false; btn.textContent = 'Post'; }
 }
 
-// ── CONV LIST — rendered from polled data ──
+// ── CONV LIST (real-time — only 1 subscription) ──
+function subscribeConvList() {
+  if (convUnsub) convUnsub();
+  convUnsub = client.onUpdate("messages:getConversationPreviews", { token: sessionToken }, (data) => {
+    if (!data) return;
+    convListData = data;
+    renderConvList();
+  });
+}
 function renderConvList(filter = '') {
-  const q = (filter || document.getElementById('conv-search').value || '').toLowerCase();
+  const q    = (filter || document.getElementById('conv-search').value || '').toLowerCase();
   const list = document.getElementById('conv-list');
-  let items = convListData;
+  let items  = convListData;
   if (q) items = items.filter(c => c.alias.toLowerCase().includes(q));
   if (items.length === 0) {
     list.innerHTML = '<div class="empty-list"><div class="empty-list-icon">👥</div>no friends yet</div>';
     return;
   }
   list.innerHTML = items.map(c => {
-    const active = currentConv === c.username ? 'active' : '';
-    const preview = c.lastMessage
-      ? (c.lastMessage.from === myUsername ? 'you: ' : '') + c.lastMessage.text
-      : 'start a conversation';
-    const ts = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
-    const unreadHtml = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
+    const active   = currentConv === c.username ? 'active' : '';
+    const preview  = c.lastMessage ? (c.lastMessage.from === myUsername ? 'you: ' : '') + c.lastMessage.text : 'start a conversation';
+    const ts       = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
+    const unreadHtml  = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
     const onlineDotHtml = `<div class="online-dot ${c.isOnline ? 'visible' : ''}"></div>`;
     return `<div class="conv-item ${active}" onclick="openConv('${esc(c.username)}','${esc(c.alias)}','${esc(c.emoji)}','${esc(c.color)}')">
       <div class="conv-av-wrap">
@@ -1370,21 +795,19 @@ function renderConvList(filter = '') {
 }
 function filterConvs() { renderConvList(document.getElementById('conv-search').value); }
 
-// ── MESSAGES — live subscription for active chat only ──
+// ── MESSAGES (real-time — only while a conv is open) ──
 function openConv(username, alias, emoji, color) {
   if (!alias) {
-    const f = convListData.find(c => c.username === username);
+    const f = convListData.find(c=>c.username===username);
     alias = f?.alias ?? username; emoji = f?.emoji ?? "🦊"; color = f?.color ?? "#5b7fff";
   }
-  currentConv = username;
-  closeAllPanels();
-  renderConvList();
+  currentConv = username; closeAllPanels(); renderConvList();
   hide('chat-placeholder');
   const cv = document.getElementById('chat-view'); cv.style.display = 'flex';
   const chatAv = document.getElementById('chat-av');
   chatAv.textContent = emoji || '🦊'; chatAv.style.borderColor = color || '#5b7fff';
   document.getElementById('chat-head-name').textContent = alias;
-  const friend = convListData.find(c => c.username === username);
+  const friend = convListData.find(c=>c.username===username);
   document.getElementById('chat-head-sub').innerHTML = friend?.isOnline
     ? `<span class="online-text">● online</span>`
     : `<span>friend</span>`;
@@ -1392,14 +815,11 @@ function openConv(username, alias, emoji, color) {
     '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">loading…</div>';
 
   if (messageUnsub) { messageUnsub(); messageUnsub = null; }
-  messageUnsub = client.onUpdate("messages:getMessages",
-    { token: sessionToken, otherUsername: username },
-    (msgs) => {
-      if (!msgs) return;
-      renderMessages(msgs);
-      client.mutation("messages:markRead", { token: sessionToken, otherUsername: username }).catch(()=>{});
-    }
-  );
+  messageUnsub = client.onUpdate("messages:getMessages", { token: sessionToken, otherUsername: username }, (msgs) => {
+    if (!msgs) return;
+    renderMessages(msgs);
+    client.mutation("messages:markRead", { token: sessionToken, otherUsername: username }).catch(()=>{});
+  });
   document.getElementById('chat-input').focus();
 }
 
@@ -1445,24 +865,24 @@ function renderMessages(msgs) {
 async function sendMsg() {
   if (!currentConv) return;
   const input = document.getElementById('chat-input');
-  const text = input.value.trim(); if (!text) return;
-  const btn = document.getElementById('send-btn'); btn.disabled = true;
+  const text  = input.value.trim(); if (!text) return;
+  const btn   = document.getElementById('send-btn'); btn.disabled = true;
   input.value = ''; input.style.height = 'auto';
   try { await client.mutation("messages:sendMessage", { token: sessionToken, toUsername: currentConv, text }); }
   catch(e) { input.value = text; }
   finally { btn.disabled = false; input.focus(); }
 }
-function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
-function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function handleKey(e)    { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
+function autoResize(el)  { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
-// ── UNREAD — live subscription (single integer, negligible bandwidth) ──
+// ── UNREAD MSG COUNT (real-time) ──
 function subscribeUnreadMsgs() {
   if (unreadMsgUnsub) unreadMsgUnsub();
   unreadMsgUnsub = client.onUpdate("messages:getUnreadCount", { token: sessionToken }, (count) => {
     if (count === undefined) return;
     const badge = document.getElementById('tab-dms-notif');
     if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
-    else { badge.style.display = 'none'; }
+    else           { badge.style.display = 'none'; }
     if (count > prevUnreadMsgCount) {
       const newUnread = convListData.find(c => c.unread > 0 && c.username !== currentConv);
       showToast(newUnread ? `New message from ${newUnread.alias}` : 'New message received', true);
@@ -1471,44 +891,21 @@ function subscribeUnreadMsgs() {
   });
 }
 
-// ── FRIEND REQUESTS — live subscription (small, important for UX) ──
-function subscribeFriendReqs() {
-  if (friendReqUnsub) friendReqUnsub();
-  friendReqUnsub = client.onUpdate("friends:getInboxRequests", { token: sessionToken }, (reqs) => {
-    if (!reqs) return;
-    cachedFriendReqs = reqs;
-    updateNotifBadge();
-    if (document.getElementById('notifs-panel').classList.contains('open')) renderNotifsPanel();
-  });
-}
-
-// ── NOTIF BADGE & PANEL ──
-function updateNotifBadge() {
-  const total = cachedFriendReqs.filter(r => r.status === 'pending').length
-              + cachedActivityNotifs.filter(n => !n.read).length;
-  const badge = document.getElementById('notif-badge');
-  badge.textContent = total;
-  badge.style.display = total > 0 ? 'flex' : 'none';
-}
-
-function notifLabel(n, html = true) {
-  const name = html
-    ? `<strong style="color:${n.fromColor||'var(--accent)'}">${esc(n.fromAlias)}</strong>`
-    : n.fromAlias;
-  const snippet = n.postSnippet
-    ? ` "${n.postSnippet.slice(0,40)}${n.postSnippet.length>40?'…':''}"`
-    : '';
-  if (n.type === 'post_like')    return `${name} liked your post${snippet}`;
-  if (n.type === 'comment_like') return `${name} liked your comment${snippet}`;
-  if (n.type === 'new_comment')  return `${name} commented on your post${snippet}`;
+// ── NOTIF PANEL RENDERING ──
+function notifLabel(n, html=true) {
+  const name    = html ? `<strong style="color:${n.fromColor||'var(--accent)'}">${esc(n.fromAlias)}</strong>` : n.fromAlias;
+  const snippet = n.postSnippet ? ` "${n.postSnippet.slice(0,40)}${n.postSnippet.length>40?'…':''}"` : '';
+  if (n.type==='post_like')    return `${name} liked your post${snippet}`;
+  if (n.type==='comment_like') return `${name} liked your comment${snippet}`;
+  if (n.type==='new_comment')  return `${name} commented on your post${snippet}`;
   return `${name} sent you a notification`;
 }
 
 function renderNotifsPanel() {
   const body = document.getElementById('notifs-body');
-  const all = [
+  const all  = [
     ...cachedFriendReqs.map(r => ({...r, _kind:'friend'})),
-    ...cachedActivityNotifs.map(n => ({...n, _kind:'activity'}))
+    ...cachedActivityNotifs.map(n => ({...n, _kind:'activity'})),
   ].sort((a,b) => b.createdAt - a.createdAt);
 
   if (all.length === 0) {
@@ -1517,8 +914,8 @@ function renderNotifsPanel() {
   }
   body.innerHTML = all.map(item => {
     if (item._kind === 'friend') {
-      const r = item, unread = r.status === 'pending' ? 'unread' : '';
-      const actions = r.status === 'pending'
+      const r = item, unread = r.status==='pending' ? 'unread' : '';
+      const actions = r.status==='pending'
         ? `<div class="notif-actions"><button class="nact-btn accept" onclick="acceptReq('${r._id}')">Accept</button><button class="nact-btn decline" onclick="declineReq('${r._id}')">Decline</button></div>`
         : `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:var(--mono)">${r.status==='accepted'?'✓ accepted':'✗ declined'}</div>`;
       return `<div class="notif-card ${unread}"><div class="notif-top"><div class="notif-text"><span style="font-size:16px;margin-right:.3rem">${r.fromEmoji||'🦊'}</span><strong style="color:${r.fromColor||'var(--accent)'}">${esc(r.fromAlias)}</strong> wants to be friends</div><div class="notif-time">${fmtTime(r.createdAt)}</div></div>${actions}</div>`;
@@ -1531,17 +928,17 @@ function renderNotifsPanel() {
   client.mutation("posts:markNotificationsRead", { token: sessionToken }).catch(()=>{});
 }
 
-async function acceptReq(id) { try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: true }); } catch(e){} }
-async function declineReq(id){ try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: false }); } catch(e){} }
+async function acceptReq(id)  { try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: true });  startNotifBadgePoll(); } catch(e){} }
+async function declineReq(id) { try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: false }); startNotifBadgePoll(); } catch(e){} }
 
-// ── FRIENDS PANEL ──
+// ── FRIENDS PANEL (on-demand) ──
 async function renderFriendsPanel() {
   const body = document.getElementById('friends-body');
   body.innerHTML = '<div style="color:var(--text3);font-size:12px;font-family:var(--mono);padding:.5rem 0">loading…</div>';
   const [friends, sentReqs, allUsers] = await Promise.all([
-    client.query("friends:getMyFriends", { token: sessionToken }),
-    client.query("friends:getSentRequests", { token: sessionToken }),
-    client.query("friends:getAllUsers", { token: sessionToken }),
+    client.query("friends:getMyFriends",   { token: sessionToken }),
+    client.query("friends:getSentRequests",{ token: sessionToken }),
+    client.query("friends:getAllUsers",    { token: sessionToken }),
   ]);
   let html = `<div class="sec-label" style="border-top:none;margin-top:0">Add a friend</div>
   <div class="add-form">
@@ -1563,22 +960,23 @@ async function renderFriendsPanel() {
       <button class="icon-btn" title="Remove" onclick="removeFriend('${esc(f.username)}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>`).join('');
   }
-  const sentTo = new Set(sentReqs.map(r => r.toUsername));
-  const friendSet = new Set(friends.map(f => f.username));
-  const discover = allUsers.filter(u => !friendSet.has(u.username) && !sentTo.has(u.username));
+  const sentTo    = new Set(sentReqs.map(r=>r.toUsername));
+  const friendSet = new Set(friends.map(f=>f.username));
+  const discover  = allUsers.filter(u => !friendSet.has(u.username) && !sentTo.has(u.username));
   if (sentReqs.length > 0) {
     html += `<div class="sec-label">Sent (${sentReqs.length})</div>`;
     html += sentReqs.map(r => {
-      const found = allUsers.find(u => u.username === r.toUsername);
+      const found = allUsers.find(u=>u.username===r.toUsername);
       return `<div class="friend-row" style="opacity:.6"><div class="friend-av">${found?.emoji??'🦊'}</div><div style="flex:1"><div class="friend-alias">${esc(found?.alias??r.toUsername)}</div></div><span class="badge-chip">pending</span></div>`;
     }).join('');
   }
   if (discover.length > 0) {
     html += `<div class="sec-label">Discover (${discover.length})</div>`;
-    html += discover.map(u => `<div class="friend-row"><div class="friend-av" style="border:1.5px solid ${u.color}">${u.emoji}${u.isOnline?'<div class="friend-online"></div>':''}</div><div style="flex:1;min-width:0"><div class="friend-alias" style="color:${u.color}">${esc(u.alias)}</div><div class="friend-bio">${u.bio?esc(u.bio):''}</div></div><button class="btn btn-secondary" onclick="quickAdd('${esc(u.alias)}')" style="font-size:12px;padding:.3rem .65rem">+ Add</button></div>`).join('');
+    html += discover.map(u=>`<div class="friend-row"><div class="friend-av" style="border:1.5px solid ${u.color}">${u.emoji}${u.isOnline?'<div class="friend-online"></div>':''}</div><div style="flex:1;min-width:0"><div class="friend-alias" style="color:${u.color}">${esc(u.alias)}</div><div class="friend-bio">${u.bio?esc(u.bio):''}</div></div><button class="btn btn-secondary" onclick="quickAdd('${esc(u.alias)}')" style="font-size:12px;padding:.3rem .65rem">+ Add</button></div>`).join('');
   }
   body.innerHTML = html;
 }
+
 async function addByAlias() {
   const input = document.getElementById('add-alias'), fb = document.getElementById('add-fb');
   const alias = input.value.trim(); if (!alias) { showFb(fb,'Enter an alias.',false); return; }
@@ -1588,20 +986,18 @@ async function addByAlias() {
     if (res.ok) { input.value = ''; renderFriendsPanel(); }
   } catch(e) { showFb(fb,'Error.',false); }
 }
-async function quickAdd(alias) {
-  try { await client.mutation("friends:sendRequest", { token: sessionToken, toAlias: alias }); renderFriendsPanel(); } catch(e){}
-}
+async function quickAdd(alias) { try { await client.mutation("friends:sendRequest",{token:sessionToken,toAlias:alias}); renderFriendsPanel(); } catch(e){} }
 async function removeFriend(username) {
   if (!confirm('Remove this friend?')) return;
   try {
     await client.mutation("friends:removeFriend", { token: sessionToken, friendUsername: username });
     if (currentConv === username) { currentConv = null; hide('chat-view'); show('chat-placeholder'); }
     renderFriendsPanel();
-  } catch(e) {}
+  } catch(e){}
 }
 function showFb(el, msg, ok) {
   el.textContent = msg; el.style.color = ok ? 'var(--green)' : 'var(--red)'; el.style.display = 'block';
-  clearTimeout(el._t); el._t = setTimeout(() => { el.style.display = 'none'; }, 3000);
+  clearTimeout(el._t); el._t = setTimeout(() => { el.style.display='none'; }, 3000);
 }
 
 // ── PROFILE PANEL ──
@@ -1640,10 +1036,10 @@ function selectEmoji(e) {
 }
 async function saveProfile() {
   const alias = document.getElementById('pf-alias').value.trim();
-  const bio = document.getElementById('pf-bio').value;
-  const fb = document.getElementById('pf-fb');
+  const bio   = document.getElementById('pf-bio').value;
+  const fb    = document.getElementById('pf-fb');
   try {
-    const res = await client.mutation("auth:updateProfile", { token: sessionToken, alias: alias||undefined, bio, color: editColor, emoji: editEmoji });
+    const res = await client.mutation("auth:updateProfile", { token: sessionToken, alias: alias || undefined, bio, color: editColor, emoji: editEmoji });
     if (!res.ok) { showFb(fb, res.error, false); return; }
     myAlias = res.alias || myAlias; myBio = bio; myColor = editColor; myEmoji = editEmoji;
     document.documentElement.style.setProperty('--myColor', myColor);
@@ -1658,7 +1054,7 @@ async function saveProfile() {
 function openPanel(which) {
   closeAllPanels(false);
   document.getElementById('overlay').classList.add('open');
-  if (which === 'notifs')  { document.getElementById('notifs-panel').classList.add('open'); renderNotifsPanel(); }
+  if (which === 'notifs')  { document.getElementById('notifs-panel').classList.add('open');  renderNotifsPanel(); }
   if (which === 'friends') { document.getElementById('friends-panel').classList.add('open'); renderFriendsPanel(); }
   if (which === 'profile') { document.getElementById('profile-panel').classList.add('open'); renderProfilePanel(); }
 }
@@ -1673,7 +1069,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ── USER PROFILE POPUP ──
+// ── USER PROFILE POPUP (on-demand) ──
 async function showUserProfile(username) {
   if (username === myUsername) { openPanel('profile'); return; }
   popupTargetUsername = username;
@@ -1682,23 +1078,24 @@ async function showUserProfile(username) {
 
   const aliasEl = document.getElementById('user-popup-alias');
   const avEl    = document.getElementById('user-popup-av');
-  aliasEl.textContent = '…'; aliasEl.style.color = 'var(--text)';
+  aliasEl.textContent = '…';
+  aliasEl.style.color = 'var(--text)';
   const ring = document.getElementById('user-popup-online-ring');
   while (avEl.firstChild !== ring) avEl.removeChild(avEl.firstChild);
-  document.getElementById('user-popup-bio').textContent = '';
-  document.getElementById('user-popup-badges').innerHTML = '';
-  document.getElementById('user-popup-meta').innerHTML = '<span style="opacity:.4">loading…</span>';
+  document.getElementById('user-popup-bio').textContent      = '';
+  document.getElementById('user-popup-badges').innerHTML     = '';
+  document.getElementById('user-popup-meta').innerHTML       = '<span style="opacity:.4">loading…</span>';
   document.getElementById('user-popup-add-btn').style.display = 'none';
   document.getElementById('user-popup-msg-btn').style.display = 'none';
-  document.getElementById('user-popup-online-label').style.display = 'none';
+  document.getElementById('user-popup-online-label').style.display  = 'none';
   document.getElementById('user-popup-offline-label').style.display = 'none';
 
   try {
     const [allUsers, friends, sentReqs, lbData] = await Promise.all([
-      client.query("friends:getAllUsers", { token: sessionToken }),
-      client.query("friends:getMyFriends", { token: sessionToken }),
+      client.query("friends:getAllUsers",     { token: sessionToken }),
+      client.query("friends:getMyFriends",    { token: sessionToken }),
       client.query("friends:getSentRequests", { token: sessionToken }),
-      client.query("hub:getLeaderboard", { token: sessionToken }),
+      client.query("hub:getLeaderboard",      { token: sessionToken }),
     ]);
 
     if (!overlay.classList.contains('open') || popupTargetUsername !== username) return;
@@ -1716,13 +1113,11 @@ async function showUserProfile(username) {
     avEl.style.borderColor = user.color;
     avEl.insertAdjacentText('afterbegin', user.emoji);
     ring.classList.toggle('visible', !!user.isOnline);
+    aliasEl.textContent = user.alias;
+    aliasEl.style.color = user.color;
 
-    aliasEl.textContent = user.alias; aliasEl.style.color = user.color;
-    const onlineLabel  = document.getElementById('user-popup-online-label');
-    const offlineLabel = document.getElementById('user-popup-offline-label');
-    if (user.isOnline) { onlineLabel.style.display = 'inline'; offlineLabel.style.display = 'none'; }
-    else { onlineLabel.style.display = 'none'; offlineLabel.style.display = 'inline'; }
-
+    document.getElementById('user-popup-online-label').style.display  = user.isOnline ? 'inline' : 'none';
+    document.getElementById('user-popup-offline-label').style.display = user.isOnline ? 'none' : 'inline';
     document.getElementById('user-popup-bio').textContent = user.bio || 'No bio yet.';
 
     const lbUser = lbData?.users?.find(u => u.username === username);
@@ -1732,7 +1127,10 @@ async function showUserProfile(username) {
       const joinDate = new Date(Date.now() - lbUser.accountAgeDays * 86400000);
       parts.push(`📅 Joined ${joinDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`);
     }
-    if (lbUser) { parts.push(`📝 ${lbUser.totalPosts} posts`); parts.push(`👍 ${lbUser.totalPostLikes} likes`); }
+    if (lbUser) {
+      parts.push(`📝 ${lbUser.totalPosts} posts`);
+      parts.push(`👍 ${lbUser.totalPostLikes} likes`);
+    }
     metaEl.innerHTML = parts.map((p, i) =>
       i === 0 ? `<span class="user-popup-stat">${p}</span>`
               : `<span class="user-popup-dot"></span><span class="user-popup-stat">${p}</span>`
@@ -1752,9 +1150,11 @@ async function showUserProfile(username) {
       addBtn.textContent = '✓ friends'; addBtn.className = 'user-popup-add-btn friends'; addBtn.title = 'Click to remove friend';
       msgBtn.style.display = 'flex';
     } else if (popupFriendStatus === 'pending') {
-      addBtn.textContent = '⏳ pending'; addBtn.className = 'user-popup-add-btn pending'; msgBtn.style.display = 'none';
+      addBtn.textContent = '⏳ pending'; addBtn.className = 'user-popup-add-btn pending';
+      msgBtn.style.display = 'none';
     } else {
-      addBtn.textContent = '+ add friend'; addBtn.className = 'user-popup-add-btn'; msgBtn.style.display = 'none';
+      addBtn.textContent = '+ add friend'; addBtn.className = 'user-popup-add-btn';
+      msgBtn.style.display = 'none';
     }
   } catch(e) { console.error('showUserProfile error:', e); overlay.classList.remove('open'); }
 }
@@ -1781,9 +1181,10 @@ async function handlePopupAddFriend() {
   } else if (popupFriendStatus === 'none') {
     try {
       const alias = document.getElementById('user-popup-alias').textContent;
-      const res = await client.mutation("friends:sendRequest", { token: sessionToken, toAlias: alias });
+      const res   = await client.mutation("friends:sendRequest", { token: sessionToken, toAlias: alias });
       if (res.ok) {
-        showToast(res.message || 'Friend request sent!'); popupFriendStatus = 'pending';
+        showToast(res.message || 'Friend request sent!');
+        popupFriendStatus = 'pending';
         const addBtn = document.getElementById('user-popup-add-btn');
         addBtn.textContent = '⏳ pending'; addBtn.className = 'user-popup-add-btn pending';
       } else { showToast(res.error || 'Error sending request'); }
@@ -1794,7 +1195,7 @@ async function handlePopupAddFriend() {
 function handlePopupOpenChat() {
   if (!popupTargetUsername) return;
   document.getElementById('user-popup-overlay').classList.remove('open');
-  const conv = convListData.find(c => c.username === popupTargetUsername);
+  const conv  = convListData.find(c => c.username === popupTargetUsername);
   const alias = conv?.alias ?? document.getElementById('user-popup-alias').textContent;
   const emoji = conv?.emoji ?? '🦊';
   const color = conv?.color ?? '#5b7fff';
@@ -1803,9 +1204,31 @@ function handlePopupOpenChat() {
   popupTargetUsername = null;
 }
 
-// ══════════════════════════════════════════════
-// ── HUB — polled every 30s while visible ──
-// ══════════════════════════════════════════════
+// ── HUB (real-time subscription, only active on hub tab) ──
+function subscribeHub() {
+  if (hubUnsub) return; // already subscribed
+  const endpoints = {
+    leaderboard: "hub:getLeaderboard",
+    updates:     "hub:getChangelog",
+    polls:       "hub:getPolls",
+    ideas:       "hub:getIdeas",
+  };
+  const endpoint = endpoints[currentHubTab];
+  if (!endpoint) return;
+  hubUnsub = client.onUpdate(endpoint, { token: sessionToken }, (data) => {
+    if (!data) return;
+    if (currentHubTab === 'leaderboard') renderLeaderboard(data);
+    else if (currentHubTab === 'updates') renderChangelog(data);
+    else if (currentHubTab === 'polls')   renderPolls(data);
+    else if (currentHubTab === 'ideas')   renderIdeas(data);
+  });
+}
+
+function fetchHub() {
+  // Used by mutations to trigger re-render (subscription handles it automatically,
+  // but if hub isn't subscribed yet, this will kick it off)
+  if (!hubUnsub) subscribeHub();
+}
 
 function switchHubTab(tab) {
   currentHubTab = tab;
@@ -1813,38 +1236,11 @@ function switchHubTab(tab) {
     const tabs = ['leaderboard','updates','polls','ideas'];
     b.classList.toggle('active', tabs[i] === tab);
   });
-  loadHub();
-}
-
-function startHubPolling() {
-  stopHubPolling();
-  loadHub();
-  // Leaderboard is very expensive — poll every 2 min. Others every 45s.
-  hubInterval = setInterval(loadHub, currentHubTab === 'leaderboard' ? 120000 : 45000);
-}
-function stopHubPolling() {
-  if (hubInterval) { clearInterval(hubInterval); hubInterval = null; }
-}
-
-async function loadHub() {
-  const scroll = document.getElementById('hub-scroll');
-  try {
-    if (currentHubTab === 'leaderboard') {
-      const data = await client.query("hub:getLeaderboard", { token: sessionToken });
-      if (data) renderLeaderboard(data);
-    } else if (currentHubTab === 'updates') {
-      const entries = await client.query("hub:getChangelog", { token: sessionToken });
-      if (entries) renderChangelog(entries);
-    } else if (currentHubTab === 'polls') {
-      const polls = await client.query("hub:getPolls", { token: sessionToken });
-      if (polls) renderPolls(polls);
-    } else if (currentHubTab === 'ideas') {
-      const ideas = await client.query("hub:getIdeas", { token: sessionToken });
-      if (ideas) renderIdeas(ideas);
-    }
-  } catch(e) {
-    scroll.innerHTML = '<div class="hub-empty">error loading — will retry</div>';
-  }
+  document.getElementById('hub-scroll').innerHTML =
+    '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">loading…</div>';
+  // Unsubscribe current hub sub and subscribe to new tab endpoint
+  if (hubUnsub) { hubUnsub(); hubUnsub = null; }
+  subscribeHub();
 }
 
 // ── BADGE RENDERING ──
@@ -1871,14 +1267,14 @@ function renderLeaderboard(data) {
   html += `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:.25rem 0">Ranked by Post Likes</div>`;
   html += `<div class="lb-table">`;
   users.forEach((u, i) => {
-    if (u.username === "michael-volpe") u.badges.unshift({ icon: "🛠️", label: "OWNER", color: "#f5c518" });
-    if (u.username === "test") u.badges.unshift({ icon: "⚙️", label: "Tester", color: "#00c2ff" });
+    if (u.username === "michael-volpe") u.badges.unshift({ icon:"🛠️", label:"OWNER", color:"#f5c518" });
+    if (u.username === "test")          u.badges.unshift({ icon:"⚙️", label:"Tester", color:"#00c2ff" });
     const rank = i + 1;
-    const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
-    const rowClass  = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
-    const rankIcon  = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+    const rankClass = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+    const rowClass  = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
+    const rankIcon  = rank===1?'👑':rank===2?'🥈':rank===3?'🥉':`#${rank}`;
     const meTag = u.username === myUsername
-      ? `<span style="font-size:9px;font-family:var(--mono);color:var(--accent);background:var(--accentBg);border:1px solid var(--accent)33;border-radius:20px;padding:.1rem .4rem">you</span>`
+      ? `<span style="font-size:9px;font-family:var(--mono);color:var(--accent);background:var(--accentBg);border:1px solid rgba(91,127,255,.33);border-radius:20px;padding:.1rem .4rem">you</span>`
       : '';
     const rowClick = u.username === myUsername
       ? `onclick="openPanel('profile')"`
@@ -1901,9 +1297,7 @@ function renderLeaderboard(data) {
   if (me && me.badges.length > 0) {
     html += `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:.75rem 0 .25rem">Your Badges</div>`;
     html += `<div style="display:flex;flex-wrap:wrap;gap:.4rem">`;
-    html += me.badges.map(b =>
-      `<div style="display:flex;align-items:center;gap:.5rem;background:var(--bg2);border:1px solid ${b.color}33;border-radius:var(--r);padding:.5rem .75rem"><span style="font-size:20px">${b.icon}</span><div><div style="font-size:12px;font-weight:700;color:${b.color}">${esc(b.label)}</div>${b.desc?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${esc(b.desc)}</div>`:''}</div></div>`
-    ).join('');
+    html += me.badges.map(b => `<div style="display:flex;align-items:center;gap:.5rem;background:var(--bg2);border:1px solid ${b.color}33;border-radius:var(--r);padding:.5rem .75rem"><span style="font-size:20px">${b.icon}</span><div><div style="font-size:12px;font-weight:700;color:${b.color}">${esc(b.label)}</div>${b.desc?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${esc(b.desc)}</div>`:''}</div></div>`).join('');
     html += `</div>`;
   }
   scroll.innerHTML = html;
@@ -1934,12 +1328,10 @@ function renderChangelog(entries) {
   else {
     html += entries.map(e => {
       const tagClass = `cl-tag-${e.tag}`;
-      const tagLabel = { feature: '✨ Feature', fix: '🐛 Fix', improvement: '🔧 Improvement', upcoming: '🔮 Upcoming' }[e.tag] || e.tag;
-      const delBtn = isAdmin
-        ? `<button class="icon-btn" onclick="deleteChangelog('${e._id}')" title="Delete" style="color:var(--text3);margin-left:auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
-        : '';
+      const tagLabel = {feature:'✨ Feature',fix:'🐛 Fix',improvement:'🔧 Improvement',upcoming:'🔮 Upcoming'}[e.tag] || e.tag;
+      const delBtn   = isAdmin ? `<button class="icon-btn" onclick="deleteChangelog('${e._id}')" title="Delete" style="color:var(--text3);margin-left:auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>` : '';
       return `<div class="cl-entry">
-        <div class="cl-header"><span class="cl-tag-chip ${tagClass}">${tagLabel}</span><div class="cl-title">${esc(e.title)}</div>${e.version ? `<span class="cl-version">${esc(e.version)}</span>` : ''}${delBtn}</div>
+        <div class="cl-header"><span class="cl-tag-chip ${tagClass}">${tagLabel}</span><div class="cl-title">${esc(e.title)}</div>${e.version?`<span class="cl-version">${esc(e.version)}</span>`:''} ${delBtn}</div>
         <div class="cl-body">${esc(e.body)}</div>
         <div class="cl-time">${fmtDate(e.createdAt)} · ${fmtTime(e.createdAt)}</div>
       </div>`;
@@ -1955,15 +1347,14 @@ async function submitChangelog() {
   const tag     = document.getElementById('cl-tag')?.value;
   if (!title || !body) { showToast('Fill in title and body'); return; }
   try {
-    const res = await client.mutation("hub:createChangelog", { token: sessionToken, title, body, version: version || undefined, tag });
+    const res = await client.mutation("hub:createChangelog", { token: sessionToken, title, body, version: version||undefined, tag });
     if (!res.ok) { showToast(res.error || 'Error'); return; }
-    showToast('Update posted!'); loadHub();
+    showToast('Update posted!'); fetchHub();
   } catch(e) { showToast('Error posting'); }
 }
-
 async function deleteChangelog(entryId) {
   if (!confirm('Delete this update?')) return;
-  try { await client.mutation("hub:deleteChangelog", { token: sessionToken, entryId }); loadHub(); } catch(e){}
+  try { await client.mutation("hub:deleteChangelog", { token: sessionToken, entryId }); fetchHub(); } catch(e){}
 }
 
 // ── POLLS ──
@@ -1980,7 +1371,7 @@ function renderPolls(polls) {
       </div>
       <div style="display:flex;gap:.5rem">
         <button class="btn btn-secondary" onclick="addPollOption()" style="font-size:12px;padding:.35rem .75rem">+ Option</button>
-        <button class="btn btn-primary" onclick="submitPoll()" style="font-size:12px;padding:.35rem .75rem">Create Poll</button>
+        <button class="btn btn-primary"   onclick="submitPoll()"    style="font-size:12px;padding:.35rem .75rem">Create Poll</button>
       </div>
     </div>`;
   }
@@ -1988,18 +1379,22 @@ function renderPolls(polls) {
   else {
     html += polls.map(p => {
       const statusChip = p.isClosed ? `<span class="poll-closed-chip">Closed</span>` : `<span class="poll-open-chip">Open</span>`;
-      const adminBtns  = isAdmin ? `${!p.isClosed ? `<button class="admin-close-btn" onclick="closePoll('${p._id}')">Close</button>` : ''}<button class="admin-close-btn" onclick="deletePoll('${p._id}')">Delete</button>` : '';
+      const adminBtns  = isAdmin ? `${!p.isClosed?`<button class="admin-close-btn" onclick="closePoll('${p._id}')">Close</button>`:''}<button class="admin-close-btn" onclick="deletePoll('${p._id}')">Delete</button>` : '';
       const options = p.options.map((opt, i) => {
-        const count = p.optionCounts[i] || 0;
-        const pct   = p.totalVotes > 0 ? Math.round((count / p.totalVotes) * 100) : 0;
-        const isVoted  = p.myVoteIndex === i;
-        const isWinner = !p.isClosed && p.totalVotes > 0 && count === Math.max(...p.optionCounts);
+        const count      = p.optionCounts[i] || 0;
+        const pct        = p.totalVotes > 0 ? Math.round((count/p.totalVotes)*100) : 0;
+        const isVoted    = p.myVoteIndex === i;
+        const isWinner   = !p.isClosed && p.totalVotes > 0 && count === Math.max(...p.optionCounts);
+        const votedClass  = isVoted  ? 'voted'  : '';
+        const winnerClass = isWinner && !isVoted ? 'winner' : '';
         const canVote = !p.isClosed;
-        return `<div class="poll-option"><button class="poll-option-btn ${isVoted?'voted':''} ${isWinner&&!isVoted?'winner':''}" onclick="${canVote?`voteOnPoll('${p._id}',${i})`:''}" ${!canVote?'disabled':''}>
-          <div class="poll-bar"><div class="poll-bar-fill" style="width:${pct}%"></div></div>
-          <span class="poll-opt-label">${isVoted?'✓ ':''} ${esc(opt)}</span>
-          <span class="poll-pct">${pct}% (${count})</span>
-        </button></div>`;
+        return `<div class="poll-option">
+          <button class="poll-option-btn ${votedClass} ${winnerClass}" onclick="${canVote?`voteOnPoll('${p._id}',${i})`:''}" ${!canVote?'disabled':''}>
+            <div class="poll-bar"><div class="poll-bar-fill" style="width:${pct}%"></div></div>
+            <span class="poll-opt-label">${isVoted?'✓ ':''} ${esc(opt)}</span>
+            <span class="poll-pct">${pct}% (${count})</span>
+          </button>
+        </div>`;
       }).join('');
       return `<div class="poll-card">
         <div class="poll-question">${esc(p.question)}</div>
@@ -2010,7 +1405,6 @@ function renderPolls(polls) {
   }
   scroll.innerHTML = html;
 }
-
 function addPollOption() {
   const list = document.getElementById('poll-opts-list'); if (!list) return;
   const count = list.querySelectorAll('.poll-opt-input').length;
@@ -2019,29 +1413,24 @@ function addPollOption() {
   input.className = 'admin-input poll-opt-input'; input.placeholder = `Option ${count + 1}`;
   list.appendChild(input);
 }
-
 async function submitPoll() {
-  const q = document.getElementById('poll-q')?.value.trim();
+  const q       = document.getElementById('poll-q')?.value.trim();
   const options = Array.from(document.querySelectorAll('.poll-opt-input')).map(i => i.value.trim()).filter(Boolean);
   if (!q) { showToast('Enter a question'); return; }
   if (options.length < 2) { showToast('Need at least 2 options'); return; }
   try {
     const res = await client.mutation("hub:createPoll", { token: sessionToken, question: q, options });
     if (!res.ok) { showToast(res.error || 'Error'); return; }
-    showToast('Poll created!'); loadHub();
+    showToast('Poll created!'); fetchHub();
   } catch(e) { showToast('Error'); }
 }
-
 async function voteOnPoll(pollId, optionIndex) {
-  try { await client.mutation("hub:votePoll", { token: sessionToken, pollId, optionIndex }); loadHub(); }
-  catch(e) { showToast('Error voting'); }
+  try { await client.mutation("hub:votePoll", { token: sessionToken, pollId, optionIndex }); fetchHub(); } catch(e) { showToast('Error voting'); }
 }
-async function closePoll(pollId) {
-  try { await client.mutation("hub:closePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){}
-}
+async function closePoll(pollId) { try { await client.mutation("hub:closePoll", { token: sessionToken, pollId }); fetchHub(); } catch(e){} }
 async function deletePoll(pollId) {
   if (!confirm('Delete this poll?')) return;
-  try { await client.mutation("hub:deletePoll", { token: sessionToken, pollId }); loadHub(); } catch(e){}
+  try { await client.mutation("hub:deletePoll", { token: sessionToken, pollId }); fetchHub(); } catch(e){}
 }
 
 // ── IDEAS ──
@@ -2085,12 +1474,10 @@ function renderIdeas(ideas) {
   }
   scroll.innerHTML = html;
 }
-
 function updateIdeaCount() {
   const el = document.getElementById('idea-input'), count = document.getElementById('idea-count');
   if (el && count) count.textContent = `${el.value.length} / 200`;
 }
-
 async function submitIdea() {
   const input = document.getElementById('idea-input');
   const text  = input?.value.trim();
@@ -2098,18 +1485,15 @@ async function submitIdea() {
   try {
     const res = await client.mutation("hub:submitIdea", { token: sessionToken, text });
     if (!res.ok) { showToast(res.error || 'Error'); return; }
-    showToast('Idea submitted!'); loadHub();
+    showToast('Idea submitted!'); fetchHub();
   } catch(e) { showToast('Error submitting'); }
 }
-
 async function deleteIdea(ideaId) {
   if (!confirm('Delete this idea?')) return;
-  try { await client.mutation("hub:deleteIdea", { token: sessionToken, ideaId }); loadHub(); } catch(e){}
+  try { await client.mutation("hub:deleteIdea", { token: sessionToken, ideaId }); fetchHub(); } catch(e){}
 }
-
 async function voteOnIdea(ideaId) {
-  try { await client.mutation("hub:voteIdea", { token: sessionToken, ideaId }); loadHub(); }
-  catch(e) { showToast('Error voting'); }
+  try { await client.mutation("hub:voteIdea", { token: sessionToken, ideaId }); fetchHub(); } catch(e) { showToast('Error voting'); }
 }
 </script>
 </body>
