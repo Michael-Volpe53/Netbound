@@ -17,22 +17,11 @@ export const sendMessage = mutation({
     const fromUsername = await resolveUser(ctx, token);
     if (!fromUsername) return { ok: false, error: "Not logged in." };
     if (!text.trim()) return { ok: false, error: "Empty message." };
-
     const key = convKey(fromUsername, toUsername);
     const [u1, u2] = key.split("::");
-    const areFriends = await ctx.db.query("friends")
-      .withIndex("by_pair", (q: any) => q.eq("user1", u1).eq("user2", u2))
-      .first();
+    const areFriends = await ctx.db.query("friends").withIndex("by_pair", (q: any) => q.eq("user1", u1).eq("user2", u2)).first();
     if (!areFriends) return { ok: false, error: "Not friends." };
-
-    await ctx.db.insert("messages", {
-      fromUsername,
-      toUsername,
-      convKey: key,
-      text: text.trim(),
-      createdAt: Date.now(),
-      read: false,
-    });
+    await ctx.db.insert("messages", { fromUsername, toUsername, convKey: key, text: text.trim(), createdAt: Date.now(), read: false });
     return { ok: true };
   },
 });
@@ -43,13 +32,9 @@ export const markRead = mutation({
     const username = await resolveUser(ctx, token);
     if (!username) return;
     const key = convKey(username, otherUsername);
-    const msgs = await ctx.db.query("messages")
-      .withIndex("by_conv", (q: any) => q.eq("convKey", key))
-      .collect();
+    const msgs = await ctx.db.query("messages").withIndex("by_conv", (q: any) => q.eq("convKey", key)).collect();
     for (const m of msgs) {
-      if (m.toUsername === username && !m.read) {
-        await ctx.db.patch(m._id, { read: true });
-      }
+      if (m.toUsername === username && !m.read) await ctx.db.patch(m._id, { read: true });
     }
   },
 });
@@ -59,6 +44,7 @@ export const getUnreadCount = query({
   handler: async (ctx, { token }) => {
     const username = await resolveUser(ctx, token);
     if (!username) return 0;
+    // Uses by_to_unread index — no full table scan
     const unread = await ctx.db.query("messages")
       .withIndex("by_to_unread", (q: any) => q.eq("toUsername", username).eq("read", false))
       .collect();
@@ -71,16 +57,9 @@ export const getMessages = query({
   handler: async (ctx, { token, otherUsername }) => {
     const username = await resolveUser(ctx, token);
     if (!username) return [];
-
     const key = convKey(username, otherUsername);
-    const msgs = await ctx.db.query("messages")
-      .withIndex("by_conv", (q: any) => q.eq("convKey", key))
-      .order("asc")
-      .collect();
-
-    // Get other user's profile for color/emoji
+    const msgs = await ctx.db.query("messages").withIndex("by_conv", (q: any) => q.eq("convKey", key)).order("asc").collect();
     const otherUser = await ctx.db.query("users").withIndex("by_username", (q: any) => q.eq("username", otherUsername)).first();
-
     return msgs.map((m: any) => ({
       _id: m._id,
       fromUsername: m.fromUsername,
@@ -108,7 +87,7 @@ export const getConversationPreviews = query({
       ...asUser2.map((f: any) => f.user1),
     ];
 
-    const ONLINE_THRESHOLD = 2 * 60 * 1000; // 2 minutes
+    const ONLINE_THRESHOLD = 2 * 60 * 1000;
 
     const previews = await Promise.all(
       friendUsernames.map(async (fu: string) => {
@@ -119,11 +98,12 @@ export const getConversationPreviews = query({
           .first();
         const friendUser = await ctx.db.query("users").withIndex("by_username", (q: any) => q.eq("username", fu)).first();
 
-        // Count unread
-        const allMsgs = await ctx.db.query("messages")
-          .withIndex("by_conv", (q: any) => q.eq("convKey", key))
+        // FIX: use by_to_unread index instead of collect()+filter
+        const unreadMsgs = await ctx.db.query("messages")
+          .withIndex("by_to_unread", (q: any) => q.eq("toUsername", username).eq("read", false))
           .collect();
-        const unread = allMsgs.filter((m: any) => m.toUsername === username && !m.read).length;
+        // Filter to just this conversation
+        const unread = unreadMsgs.filter((m: any) => m.convKey === key).length;
 
         const isOnline = friendUser?.lastSeen ? (Date.now() - friendUser.lastSeen) < ONLINE_THRESHOLD : false;
 
