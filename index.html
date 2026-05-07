@@ -84,9 +84,14 @@
       <div class="sidebar">
         <div class="sidebar-head">
           <span class="sidebar-title">Messages</span>
-          <button class="icon-btn" onclick="openPanel('friends')" title="New chat">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
+          <div style="display:flex;gap:.25rem">
+            <button class="icon-btn" onclick="openNewGroupModal()" title="New group chat" style="font-size:13px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </button>
+            <button class="icon-btn" onclick="openPanel('friends')" title="New DM">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
         </div>
         <div class="sidebar-search">
           <input type="text" placeholder="search…" id="conv-search" oninput="filterConvs()">
@@ -241,6 +246,29 @@
   </div>
 </div>
 
+<!-- NEW GROUP MODAL -->
+<div class="modal-overlay" id="new-group-overlay" onclick="closeNewGroupModal(event)">
+  <div class="modal-card" id="new-group-card">
+    <div class="modal-head">
+      <span class="modal-title">New Group Chat</span>
+      <button class="icon-btn" onclick="document.getElementById('new-group-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Group name</label>
+        <input id="group-name-input" type="text" placeholder="e.g. Squad, Book Club…" maxlength="32" autocomplete="off">
+      </div>
+      <div class="fg" style="margin-top:.75rem">
+        <label>Add friends</label>
+        <div id="group-members-list" style="display:flex;flex-direction:column;gap:.4rem;margin-top:.3rem"></div>
+      </div>
+      <div id="group-selected-row" style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:1.2rem;margin-top:.5rem"></div>
+      <div id="group-create-fb" style="font-size:12px;color:var(--red);display:none;margin-top:.3rem"></div>
+      <button class="btn btn-primary" onclick="submitNewGroup()" style="margin-top:.75rem;width:100%">Create Group</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -264,11 +292,15 @@ let client;
 let myUsername = null, myAlias = null, myEmoji = "🦊", myColor = "#5b7fff", myBio = "";
 let sessionToken = null;
 let currentConv = null;
+let currentGroupId = null; // currently open group chat
+let groupListData  = [];
+let selectedGroupMembers = new Set(); // for group creation modal
 let convListData = [];
 let isAdmin = false;
 
 // All onUpdate subscriptions — killed/revived on tab visibility changes
 let messageUnsub = null, convUnsub = null, unreadMsgUnsub = null;
+let groupMsgUnsub = null, groupListUnsub = null, groupUnreadUnsub = null;
 let feedUnsub = null, notifUnsub = null, userCountUnsub = null, hubUnsub = null;
 let heartbeatInterval = null;
 
@@ -336,6 +368,9 @@ Object.assign(window, {
   submitChangelog, deleteChangelog,
   showUserProfile, closeUserPopup, handlePopupAddFriend, handlePopupOpenChat,
   addPollOption, submitPoll, updateIdeaCount,
+  // Group chat
+  openNewGroupModal, closeNewGroupModal, toggleGroupMember, submitNewGroup,
+  openGroupConv, sendGroupMsg, leaveGroup,
 });
 
 // ── INIT ──
@@ -435,6 +470,8 @@ async function bootApp() {
   subscribeUnreadMsgs();
   subscribeNotifBadge();
   subscribeUserCount();
+  subscribeGroupList();
+  subscribeGroupUnread();
   startHeartbeat();
 
   // Pause subs when tab is hidden, resume when visible
@@ -467,6 +504,9 @@ function teardown() {
   if (messageUnsub)   { messageUnsub();   messageUnsub   = null; }
   if (convUnsub)      { convUnsub();      convUnsub      = null; }
   if (unreadMsgUnsub) { unreadMsgUnsub(); unreadMsgUnsub = null; }
+  if (groupMsgUnsub)  { groupMsgUnsub();  groupMsgUnsub  = null; }
+  if (groupListUnsub) { groupListUnsub(); groupListUnsub = null; }
+  if (groupUnreadUnsub){ groupUnreadUnsub(); groupUnreadUnsub = null; }
   pauseNonEssentialSubs();
   clearInterval(heartbeatInterval); heartbeatInterval = null;
 }
@@ -765,32 +805,70 @@ function subscribeConvList() {
 function renderConvList(filter = '') {
   const q    = (filter || document.getElementById('conv-search').value || '').toLowerCase();
   const list = document.getElementById('conv-list');
-  let items  = convListData;
-  if (q) items = items.filter(c => c.alias.toLowerCase().includes(q));
-  if (items.length === 0) {
-    list.innerHTML = '<div class="empty-list"><div class="empty-list-icon">👥</div>no friends yet</div>';
+
+  // Merge DMs and groups, sort by last message time
+  const dmItems    = convListData.map(c => ({ ...c, _type: 'dm',    _sortTs: c.lastMessage?.ts ?? 0 }));
+  const groupItems = groupListData.map(g => ({ ...g, _type: 'group', _sortTs: g.lastMessageAt ?? 0 }));
+  let combined = [...dmItems, ...groupItems].sort((a, b) => b._sortTs - a._sortTs);
+
+  if (q) combined = combined.filter(c =>
+    c._type === 'dm'    ? c.alias.toLowerCase().includes(q) :
+    c._type === 'group' ? c.name.toLowerCase().includes(q)  : false
+  );
+
+  if (combined.length === 0) {
+    list.innerHTML = '<div class="empty-list"><div class="empty-list-icon">💬</div>no conversations yet</div>';
     return;
   }
-  list.innerHTML = items.map(c => {
-    const active   = currentConv === c.username ? 'active' : '';
-    const preview  = c.lastMessage ? (c.lastMessage.from === myUsername ? 'you: ' : '') + c.lastMessage.text : 'start a conversation';
-    const ts       = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
-    const unreadHtml  = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
-    const onlineDotHtml = `<div class="online-dot ${c.isOnline ? 'visible' : ''}"></div>`;
-    return `<div class="conv-item ${active}" onclick="openConv('${esc(c.username)}','${esc(c.alias)}','${esc(c.emoji)}','${esc(c.color)}')">
-      <div class="conv-av-wrap">
-        <div class="conv-av" style="border-color:${c.color}">${c.emoji}</div>
-        ${onlineDotHtml}
-      </div>
-      <div class="conv-info">
-        <div class="conv-name">${esc(c.alias)}</div>
-        <div class="conv-preview">${esc(preview.slice(0,40))}</div>
-      </div>
-      <div class="conv-meta">
-        <div class="conv-time">${ts}</div>
-        ${unreadHtml}
-      </div>
-    </div>`;
+
+  list.innerHTML = combined.map(c => {
+    if (c._type === 'dm') {
+      const active        = currentConv === c.username && !currentGroupId ? 'active' : '';
+      const preview       = c.lastMessage ? (c.lastMessage.from === myUsername ? 'you: ' : '') + c.lastMessage.text : 'start a conversation';
+      const ts            = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
+      const unreadHtml    = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
+      const onlineDotHtml = `<div class="online-dot ${c.isOnline ? 'visible' : ''}"></div>`;
+      return `<div class="conv-item ${active}" onclick="openConv('${esc(c.username)}','${esc(c.alias)}','${esc(c.emoji)}','${esc(c.color)}')">
+        <div class="conv-av-wrap">
+          <div class="conv-av" style="border-color:${c.color}">${c.emoji}</div>
+          ${onlineDotHtml}
+        </div>
+        <div class="conv-info">
+          <div class="conv-name">${esc(c.alias)}</div>
+          <div class="conv-preview">${esc(preview.slice(0,40))}</div>
+        </div>
+        <div class="conv-meta">
+          <div class="conv-time">${ts}</div>
+          ${unreadHtml}
+        </div>
+      </div>`;
+    } else {
+      // Group
+      const active     = currentGroupId === c._id ? 'active' : '';
+      const preview    = c.lastMessage
+        ? (c.lastMessage.fromUsername === myUsername ? 'you: ' : '') + c.lastMessage.text
+        : 'group created';
+      const ts         = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
+      const unreadHtml = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
+      const avatarStack = c.memberProfiles.slice(0, 3).map((m, i) =>
+        `<div class="group-av-mini" style="border-color:${m.color};z-index:${3-i};left:${i*10}px">${m.emoji}</div>`
+      ).join('');
+      return `<div class="conv-item ${active}" onclick="openGroupConv('${c._id}')">
+        <div class="conv-av-wrap" style="position:relative;width:44px;height:36px">
+          ${avatarStack}
+        </div>
+        <div class="conv-info" style="margin-left:${Math.min(c.memberProfiles.length - 1, 2) * 10 + 4}px">
+          <div class="conv-name" style="display:flex;align-items:center;gap:.3rem">
+            <span style="font-size:10px;color:var(--text3)">👥</span>${esc(c.name)}
+          </div>
+          <div class="conv-preview">${esc(preview.slice(0, 40))}</div>
+        </div>
+        <div class="conv-meta">
+          <div class="conv-time">${ts}</div>
+          ${unreadHtml}
+        </div>
+      </div>`;
+    }
   }).join('');
 }
 function filterConvs() { renderConvList(document.getElementById('conv-search').value); }
@@ -801,7 +879,8 @@ function openConv(username, alias, emoji, color) {
     const f = convListData.find(c=>c.username===username);
     alias = f?.alias ?? username; emoji = f?.emoji ?? "🦊"; color = f?.color ?? "#5b7fff";
   }
-  currentConv = username; closeAllPanels(); renderConvList();
+  currentConv = username; currentGroupId = null; closeAllPanels(); renderConvList();
+  if (groupMsgUnsub) { groupMsgUnsub(); groupMsgUnsub = null; }
   hide('chat-placeholder');
   const cv = document.getElementById('chat-view'); cv.style.display = 'flex';
   const chatAv = document.getElementById('chat-av');
@@ -863,6 +942,7 @@ function renderMessages(msgs) {
 }
 
 async function sendMsg() {
+  if (currentGroupId) { await sendGroupMsg(); return; }
   if (!currentConv) return;
   const input = document.getElementById('chat-input');
   const text  = input.value.trim(); if (!text) return;
@@ -880,8 +960,10 @@ function subscribeUnreadMsgs() {
   if (unreadMsgUnsub) unreadMsgUnsub();
   unreadMsgUnsub = client.onUpdate("messages:getUnreadCount", { token: sessionToken }, (count) => {
     if (count === undefined) return;
+    dmUnreadCount = count;
     const badge = document.getElementById('tab-dms-notif');
-    if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+    const total = dmUnreadCount + groupUnreadCount;
+    if (total > 0) { badge.textContent = total; badge.style.display = 'flex'; }
     else           { badge.style.display = 'none'; }
     if (count > prevUnreadMsgCount) {
       const newUnread = convListData.find(c => c.unread > 0 && c.username !== currentConv);
@@ -916,7 +998,7 @@ function renderNotifsPanel() {
     if (item._kind === 'friend') {
       const r = item, unread = r.status==='pending' ? 'unread' : '';
       const actions = r.status==='pending'
-        ? `<div class="notif-actions"><button class="nact-btn accept" onclick="acceptReq('${r._id}')">Accept</button><button class="nact-btn decline" onclick="declineReq('${r._id}')">Decline</button></div>`
+        ? `<div class="notif-actions"><button class="nact-btn accept" data-req="${r._id}" onclick="acceptReq('${r._id}')">Accept</button><button class="nact-btn decline" data-req="${r._id}" onclick="declineReq('${r._id}')">Decline</button></div>`
         : `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:var(--mono)">${r.status==='accepted'?'✓ accepted':'✗ declined'}</div>`;
       return `<div class="notif-card ${unread}"><div class="notif-top"><div class="notif-text"><span style="font-size:16px;margin-right:.3rem">${r.fromEmoji||'🦊'}</span><strong style="color:${r.fromColor||'var(--accent)'}">${esc(r.fromAlias)}</strong> wants to be friends</div><div class="notif-time">${fmtTime(r.createdAt)}</div></div>${actions}</div>`;
     } else {
@@ -928,8 +1010,27 @@ function renderNotifsPanel() {
   client.mutation("posts:markNotificationsRead", { token: sessionToken }).catch(()=>{});
 }
 
-async function acceptReq(id)  { try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: true });  startNotifBadgePoll(); } catch(e){} }
-async function declineReq(id) { try { await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: false }); startNotifBadgePoll(); } catch(e){} }
+async function acceptReq(id) {
+  // Immediately disable both buttons to prevent double-clicking
+  document.querySelectorAll(`.nact-btn[data-req="${id}"]`).forEach(b => { b.disabled = true; b.style.opacity = '.5'; });
+  try {
+    await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: true });
+    // Update cached data optimistically so re-render shows correct state
+    const req = cachedFriendReqs.find(r => r._id === id);
+    if (req) req.status = 'accepted';
+    renderNotifsPanel();
+    showToast('Friend request accepted! ✓');
+  } catch(e) { showToast('Error accepting request'); }
+}
+async function declineReq(id) {
+  document.querySelectorAll(`.nact-btn[data-req="${id}"]`).forEach(b => { b.disabled = true; b.style.opacity = '.5'; });
+  try {
+    await client.mutation("friends:respondRequest", { token: sessionToken, requestId: id, accept: false });
+    const req = cachedFriendReqs.find(r => r._id === id);
+    if (req) req.status = 'declined';
+    renderNotifsPanel();
+  } catch(e) { showToast('Error declining request'); }
+}
 
 // ── FRIENDS PANEL (on-demand) ──
 async function renderFriendsPanel() {
@@ -1495,6 +1596,210 @@ async function deleteIdea(ideaId) {
 async function voteOnIdea(ideaId) {
   try { await client.mutation("hub:voteIdea", { token: sessionToken, ideaId }); fetchHub(); } catch(e) { showToast('Error voting'); }
 }
+
+// ── GROUP CHAT SUBSCRIPTIONS ──
+function subscribeGroupList() {
+  if (groupListUnsub) return;
+  groupListUnsub = client.onUpdate("groups:getMyGroups", { token: sessionToken }, (data) => {
+    groupListData = data || [];
+    renderConvList(); // re-render combined list
+  });
+}
+
+function subscribeGroupUnread() {
+  if (groupUnreadUnsub) return;
+  groupUnreadUnsub = client.onUpdate("groups:getGroupUnreadCount", { token: sessionToken }, (count) => {
+    // Combined unread badge is handled by existing unreadMsgUnsub + this
+    updateCombinedDmBadge(count || 0);
+  });
+}
+
+let groupUnreadCount = 0;
+let dmUnreadCount = 0;
+function updateCombinedDmBadge(groupCount) {
+  groupUnreadCount = groupCount;
+  const total = dmUnreadCount + groupUnreadCount;
+  const badge = document.getElementById('tab-dms-notif');
+  if (total > 0) { badge.textContent = total; badge.style.display = 'flex'; }
+  else           { badge.style.display = 'none'; }
+}
+
+// ── OPEN GROUP CONVERSATION ──
+function openGroupConv(groupId) {
+  currentGroupId = groupId;
+  currentConv    = null;
+  closeAllPanels();
+  renderConvList();
+
+  const group = groupListData.find(g => g._id === groupId);
+  if (!group) return;
+
+  hide('chat-placeholder');
+  const cv = document.getElementById('chat-view'); cv.style.display = 'flex';
+
+  const chatAv = document.getElementById('chat-av');
+  chatAv.textContent = '👥'; chatAv.style.borderColor = 'var(--accent)';
+  document.getElementById('chat-head-name').textContent = group.name;
+  const memberNames = group.memberProfiles.map(m => m.alias).join(', ');
+  document.getElementById('chat-head-sub').innerHTML = `<span style="color:var(--text3)">${group.members.length} members · ${memberNames}</span> <button class="btn btn-secondary" style="font-size:10px;padding:.15rem .45rem;margin-left:.4rem" onclick="leaveGroup('${groupId}')">Leave</button>`;
+
+  document.getElementById('chat-messages').innerHTML =
+    '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">loading…</div>';
+
+  if (groupMsgUnsub) { groupMsgUnsub(); groupMsgUnsub = null; }
+  if (messageUnsub)  { messageUnsub();  messageUnsub  = null; }
+
+  groupMsgUnsub = client.onUpdate("groups:getGroupMessages", { token: sessionToken, groupId }, (msgs) => {
+    if (!msgs) return;
+    renderGroupMessages(msgs);
+    client.mutation("groups:markGroupRead", { token: sessionToken, groupId }).catch(()=>{});
+  });
+
+  document.getElementById('chat-input').focus();
+}
+
+function renderGroupMessages(msgs) {
+  const container = document.getElementById('chat-messages');
+  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+  if (msgs.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);padding:2rem">no messages yet — say hello!</div>';
+    return;
+  }
+  let html = '', lastDate = '', lastFrom = '';
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    const dateStr = fmtDate(m.createdAt);
+    if (dateStr !== lastDate) { html += `<div class="date-divider"><span>${dateStr}</span></div>`; lastDate = dateStr; lastFrom = ''; }
+    const side        = m.isMe ? 'me' : 'them';
+    const sameAsPrev  = lastFrom === m.fromUsername;
+    const sameAsNext  = msgs[i+1]?.fromUsername === m.fromUsername && fmtDate(msgs[i+1]?.createdAt) === dateStr;
+    let groupClass = '';
+    if (sameAsPrev) groupClass += ' grouped-top';
+    if (sameAsNext) groupClass += ' grouped-bottom';
+    // Show sender alias above first message in a run (for group chats, non-me)
+    const showAlias = !sameAsPrev && !m.isMe;
+    const showAv    = !sameAsNext && !m.isMe;
+    const avHtml    = m.isMe
+      ? `<div class="msg-av-spacer"></div>`
+      : showAv
+        ? `<div class="msg-av-small" style="border-color:${m.senderColor}">${m.senderEmoji}</div>`
+        : `<div class="msg-av-spacer"></div>`;
+    const otherColorStyle = !m.isMe ? `style="--otherColor:${m.senderColor}"` : '';
+    html += `<div class="msg-row ${side}${groupClass}" style="margin-bottom:${sameAsNext ? '.1rem' : '.55rem'}">
+      ${avHtml}
+      <div>
+        ${showAlias ? `<div class="msg-sender-alias" style="color:${m.senderColor}">${esc(m.senderAlias)}</div>` : ''}
+        <div class="msg-bubble" ${otherColorStyle}>${esc(m.text)}</div>
+        ${!sameAsNext ? `<div class="msg-ts-inline">${fmtTime(m.createdAt)}</div>` : ''}
+      </div>
+    </div>`;
+    lastFrom = m.fromUsername;
+  }
+  container.innerHTML = html;
+  if (wasAtBottom) container.scrollTop = container.scrollHeight;
+}
+
+async function sendGroupMsg() {
+  if (!currentGroupId) return;
+  const input = document.getElementById('chat-input');
+  const text  = input.value.trim(); if (!text) return;
+  const btn   = document.getElementById('send-btn'); btn.disabled = true;
+  input.value = ''; input.style.height = 'auto';
+  try { await client.mutation("groups:sendGroupMessage", { token: sessionToken, groupId: currentGroupId, text }); }
+  catch(e) { input.value = text; }
+  finally { btn.disabled = false; input.focus(); }
+}
+
+async function leaveGroup(groupId) {
+  if (!confirm('Leave this group chat?')) return;
+  try {
+    await client.mutation("groups:leaveGroup", { token: sessionToken, groupId });
+    if (currentGroupId === groupId) {
+      currentGroupId = null;
+      hide('chat-view');
+      show('chat-placeholder');
+      if (groupMsgUnsub) { groupMsgUnsub(); groupMsgUnsub = null; }
+    }
+    showToast('Left group');
+  } catch(e) { showToast('Error leaving group'); }
+}
+
+// ── NEW GROUP MODAL ──
+async function openNewGroupModal() {
+  selectedGroupMembers = new Set();
+  document.getElementById('group-name-input').value = '';
+  document.getElementById('group-create-fb').style.display = 'none';
+  document.getElementById('group-selected-row').innerHTML = '';
+  const listEl = document.getElementById('group-members-list');
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:12px;font-family:var(--mono)">loading friends…</div>';
+  document.getElementById('new-group-overlay').classList.add('open');
+
+  try {
+    const friends = await client.query("friends:getMyFriends", { token: sessionToken });
+    if (friends.length === 0) {
+      listEl.innerHTML = '<div style="color:var(--text3);font-size:12px;font-family:var(--mono)">no friends yet — add friends first</div>';
+      return;
+    }
+    listEl.innerHTML = friends.map(f => `
+      <div class="group-member-row" id="gmrow-${f.username}" onclick="toggleGroupMember('${esc(f.username)}','${esc(f.alias)}','${esc(f.emoji)}','${esc(f.color)}')">
+        <div class="friend-av" style="border:1.5px solid ${f.color};width:28px;height:28px;font-size:14px">${f.emoji}</div>
+        <div style="flex:1"><div class="friend-alias" style="color:${f.color};font-size:13px">${esc(f.alias)}</div></div>
+        <div class="group-check" id="gcheck-${f.username}">✓</div>
+      </div>`).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--red);font-size:12px">error loading friends</div>';
+  }
+}
+
+function closeNewGroupModal(e) {
+  if (e && e.target !== document.getElementById('new-group-overlay')) return;
+  document.getElementById('new-group-overlay').classList.remove('open');
+}
+
+function toggleGroupMember(username, alias, emoji, color) {
+  if (selectedGroupMembers.has(username)) {
+    selectedGroupMembers.delete(username);
+    document.getElementById(`gmrow-${username}`)?.classList.remove('selected');
+    document.getElementById(`gcheck-${username}`)?.classList.remove('visible');
+  } else {
+    selectedGroupMembers.add(username);
+    document.getElementById(`gmrow-${username}`)?.classList.add('selected');
+    document.getElementById(`gcheck-${username}`)?.classList.add('visible');
+  }
+  // Update chips row
+  const row = document.getElementById('group-selected-row');
+  row.innerHTML = [...selectedGroupMembers].map(u => {
+    // find alias from the rendered list data
+    const el = document.getElementById(`gmrow-${u}`);
+    const aliasText = el?.querySelector('.friend-alias')?.textContent || u;
+    const emojiText = el?.querySelector('.friend-av')?.textContent || '🦊';
+    return `<span class="group-chip">${emojiText} ${esc(aliasText)}</span>`;
+  }).join('');
+}
+
+async function submitNewGroup() {
+  const name = document.getElementById('group-name-input').value.trim();
+  const fb   = document.getElementById('group-create-fb');
+  if (!name) { fb.textContent = 'Enter a group name.'; fb.style.display = 'block'; return; }
+  if (selectedGroupMembers.size === 0) { fb.textContent = 'Add at least one friend.'; fb.style.display = 'block'; return; }
+
+  try {
+    const res = await client.mutation("groups:createGroup", {
+      token: sessionToken,
+      name,
+      memberUsernames: [...selectedGroupMembers],
+    });
+    if (!res.ok) { fb.textContent = res.error || 'Error'; fb.style.display = 'block'; return; }
+    document.getElementById('new-group-overlay').classList.remove('open');
+    showToast(`Group "${name}" created!`);
+    // Open the new group chat
+    setTimeout(() => {
+      const group = groupListData.find(g => g._id === res.groupId);
+      if (group || res.groupId) openGroupConv(res.groupId);
+    }, 400);
+  } catch(e) { fb.textContent = 'Error creating group.'; fb.style.display = 'block'; }
+}
+
 </script>
 </body>
 </html>
