@@ -17,6 +17,14 @@ async function getAuthorProfile(ctx: any, username: string) {
   };
 }
 
+// Helper: increment a numeric field on a user record safely
+async function bumpUserStat(ctx: any, username: string, field: string, delta: number) {
+  const user = await ctx.db.query("users").withIndex("by_username", (q: any) => q.eq("username", username)).first();
+  if (!user) return;
+  const current = (user as any)[field] ?? 0;
+  await ctx.db.patch(user._id, { [field]: Math.max(0, current + delta) });
+}
+
 // ── CREATE POST ──
 export const createPost = mutation({
   args: {
@@ -42,6 +50,10 @@ export const createPost = mutation({
       likeCount: 0,
       dislikeCount: 0,
     });
+
+    // Increment user's post count
+    await bumpUserStat(ctx, username, "totalPosts", 1);
+
     return { ok: true, postId };
   },
 });
@@ -67,6 +79,16 @@ export const deletePost = mutation({
     }
 
     await ctx.db.delete(postId);
+
+    // Decrement user's post count and remove this post's likes from their total
+    await bumpUserStat(ctx, username, "totalPosts", -1);
+    await bumpUserStat(ctx, username, "totalPostLikes", -(post.likeCount ?? 0));
+
+    // Also decrement totalComments for each comment author
+    for (const c of comments) {
+      await bumpUserStat(ctx, c.authorUsername, "totalComments", -1);
+    }
+
     return { ok: true };
   },
 });
@@ -93,18 +115,23 @@ export const reactToPost = mutation({
       if (existing.reaction === reaction) {
         // Toggle off
         await ctx.db.delete(existing._id);
-        const delta = reaction === "like" ? -1 : 0;
         await ctx.db.patch(postId, {
           likeCount: Math.max(0, post.likeCount + (reaction === "like" ? -1 : 0)),
           dislikeCount: Math.max(0, post.dislikeCount + (reaction === "dislike" ? -1 : 0)),
         });
+        // If un-liking, decrement author's totalPostLikes
+        if (reaction === "like") {
+          await bumpUserStat(ctx, post.authorUsername, "totalPostLikes", -1);
+        }
       } else {
-        // Switch reaction
+        // Switch reaction (like→dislike or dislike→like)
         await ctx.db.patch(existing._id, { reaction });
         await ctx.db.patch(postId, {
           likeCount: post.likeCount + (reaction === "like" ? 1 : -1),
           dislikeCount: post.dislikeCount + (reaction === "dislike" ? 1 : -1),
         });
+        // Switching to like = +1, switching away from like = -1
+        await bumpUserStat(ctx, post.authorUsername, "totalPostLikes", reaction === "like" ? 1 : -1);
       }
     } else {
       // New reaction
@@ -113,6 +140,11 @@ export const reactToPost = mutation({
         likeCount: post.likeCount + (reaction === "like" ? 1 : 0),
         dislikeCount: post.dislikeCount + (reaction === "dislike" ? 1 : 0),
       });
+
+      // Increment author's totalPostLikes if this is a like
+      if (reaction === "like") {
+        await bumpUserStat(ctx, post.authorUsername, "totalPostLikes", 1);
+      }
 
       // Notify post author if liked (not yourself)
       if (reaction === "like" && post.authorUsername !== username) {
@@ -150,6 +182,10 @@ export const addComment = mutation({
       likeCount: 0,
       dislikeCount: 0,
     });
+
+    // Increment user's comment count
+    await bumpUserStat(ctx, username, "totalComments", 1);
+
     return { ok: true, commentId };
   },
 });
@@ -172,6 +208,10 @@ export const deleteComment = mutation({
     const reactions = await ctx.db.query("commentReactions").withIndex("by_comment", (q: any) => q.eq("commentId", commentId)).collect();
     for (const r of reactions) await ctx.db.delete(r._id);
     await ctx.db.delete(commentId);
+
+    // Decrement comment author's totalComments
+    await bumpUserStat(ctx, comment.authorUsername, "totalComments", -1);
+
     return { ok: true };
   },
 });
@@ -218,7 +258,6 @@ export const reactToComment = mutation({
       // Notify comment author if liked (not yourself)
       if (reaction === "like" && comment.authorUsername !== username) {
         const actor = await getAuthorProfile(ctx, username);
-        const post = await ctx.db.get(comment.postId);
         await ctx.db.insert("notifications", {
           toUsername: comment.authorUsername,
           fromAlias: actor.alias,
@@ -264,7 +303,6 @@ export const getTrending = query({
       .order("desc")
       .take(200);
 
-    // Sort by likes - dislikes
     const scored = posts.map((p: any) => ({ ...p, score: p.likeCount - p.dislikeCount }));
     scored.sort((a: any, b: any) => b.score - a.score);
     const top = scored.slice(0, 50);
