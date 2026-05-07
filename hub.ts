@@ -19,12 +19,73 @@ async function getProfile(ctx: any, username: string) {
     .query("users")
     .withIndex("by_username", (q: any) => q.eq("username", username))
     .first();
+
+  if (!user) {
+    return {
+      alias: username,
+      color: "#5b7fff",
+      emoji: "🦊",
+      bio: "",
+      createdAt: 0,
+      badges: [],
+    };
+  }
+
+  const userPosts = await ctx.db
+    .query("posts")
+    .withIndex("by_author", (q: any) => q.eq("authorUsername", username))
+    .collect();
+
+  const totalPostLikes = userPosts.reduce((sum: number, p: any) => sum + (p.likeCount ?? 0), 0);
+  const totalPosts = userPosts.length;
+
+  const allComments = await ctx.db.query("comments").collect();
+  const totalComments = allComments.filter((c: any) => c.authorUsername === username).length;
+
+  const accountAgeDays = Math.floor((Date.now() - user.createdAt) / 86400000);
+
+  const maxLikes = 0;
+  const maxPosts = 0;
+  const maxComments = 0;
+
+  const badges = computeBadges({
+    totalPostLikes,
+    totalPosts,
+    totalComments,
+    accountAgeDays,
+    isTopLiked: false,
+    isTopPoster: false,
+    isMostActive: false,
+  });
+
+  // 👇 OWNER + TESTER badges (your custom ones)
+  if (username === "michael-volpe") {
+    badges.push({
+      id: "owner",
+      label: "Owner",
+      icon: "🛠️",
+      color: "#f5c518",
+      desc: ""
+    });
+  }
+
+  if (username === "test") {
+    badges.push({
+      id: "tester",
+      label: "Tester",
+      icon: "🧪",
+      color: "#2ecc8a",
+      desc: ""
+    });
+  }
+
   return {
-    alias: user?.alias ?? username,
-    color: user?.color ?? "#5b7fff",
-    emoji: user?.emoji ?? "🦊",
-    bio: user?.bio ?? "",
-    createdAt: user?.createdAt ?? 0,
+    alias: user.alias ?? username,
+    color: user.color ?? "#5b7fff",
+    emoji: user.emoji ?? "🦊",
+    bio: user.bio ?? "",
+    createdAt: user.createdAt,
+    badges,
   };
 }
 
