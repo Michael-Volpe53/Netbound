@@ -502,6 +502,88 @@ input, textarea { font-family: var(--sans); }
 .idea-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
 .idea-note { font-size: 11px; color: var(--text3); font-family: var(--mono); background: var(--bg3); border-radius: 6px; padding: .4rem .65rem; border: 1px solid var(--border); }
 .hub-empty { text-align: center; color: var(--text3); font-size: 12px; font-family: var(--mono); padding: 2rem 0; }
+
+/* ── USER PROFILE POPUP ── */
+.user-popup-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(3px);
+  display: none; align-items: center; justify-content: center;
+}
+.user-popup-overlay.open { display: flex; }
+.user-popup-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--rLg); width: 320px; max-width: calc(100vw - 2rem);
+  box-shadow: 0 24px 64px rgba(0,0,0,.75); overflow: hidden;
+  animation: popIn .15s cubic-bezier(.4,0,.2,1);
+}
+@keyframes popIn { from { transform: scale(.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.user-popup-banner {
+  height: 68px;
+}
+.user-popup-avatar-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 1.1rem; margin-top: -30px; margin-bottom: .75rem;
+}
+.user-popup-av {
+  width: 58px; height: 58px; border-radius: 14px; font-size: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg3); border: 3px solid var(--bg2);
+  position: relative; flex-shrink: 0;
+}
+.user-popup-online-ring {
+  position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--green); border: 2.5px solid var(--bg2);
+  display: none;
+}
+.user-popup-online-ring.visible { display: block; }
+.user-popup-action-row { display: flex; gap: .4rem; align-items: center; }
+.user-popup-add-btn {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 8px; padding: .4rem .9rem; font-size: 11px;
+  font-weight: 700; font-family: var(--mono); cursor: pointer;
+  transition: all .15s; letter-spacing: .04em; white-space: nowrap;
+}
+.user-popup-add-btn:hover { background: var(--accent2); }
+.user-popup-add-btn.friends {
+  background: transparent; color: var(--green); border: 1px solid rgba(46,204,138,.35);
+}
+.user-popup-add-btn.friends:hover { background: rgba(255,77,106,.08); color: var(--red); border-color: rgba(255,77,106,.3); }
+.user-popup-add-btn.pending {
+  background: transparent; color: var(--text3); border: 1px solid var(--border);
+  cursor: default; opacity: .7;
+}
+.user-popup-msg-btn {
+  background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
+  border-radius: 8px; padding: .4rem .75rem; font-size: 11px;
+  font-weight: 700; font-family: var(--mono); cursor: pointer;
+  transition: all .15s; display: none; align-items: center; gap: .3rem; white-space: nowrap;
+}
+.user-popup-msg-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+.user-popup-body { padding: 0 1.1rem 1.1rem; }
+.user-popup-name-row { display: flex; align-items: center; gap: .45rem; margin-bottom: .1rem; flex-wrap: wrap; }
+.user-popup-alias { font-size: 17px; font-weight: 700; }
+.user-popup-online-label { font-size: 10px; font-family: var(--mono); color: var(--green); }
+.user-popup-offline-label { font-size: 10px; font-family: var(--mono); color: var(--text3); }
+.user-popup-bio { font-size: 13px; color: var(--text2); margin: .35rem 0 .6rem; font-family: var(--sans); line-height: 1.5; }
+.user-popup-divider { border: none; border-top: 1px solid var(--border); margin: .6rem 0; }
+.user-popup-meta { display: flex; align-items: center; gap: .35rem; font-size: 11px; color: var(--text3); font-family: var(--mono); flex-wrap: wrap; margin-bottom: .5rem; }
+.user-popup-stat { display: flex; align-items: center; gap: .2rem; }
+.user-popup-dot { width: 2px; height: 2px; border-radius: 50%; background: var(--text3); }
+.user-popup-badges { display: flex; flex-wrap: wrap; gap: .3rem; }
+.user-popup-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: 10px; font-family: var(--mono); border-radius: 20px;
+  padding: .15rem .5rem; border: 1px solid; white-space: nowrap;
+}
+.user-popup-close {
+  position: absolute; top: .65rem; right: .65rem;
+  background: rgba(0,0,0,.35); border: none; color: #fff; border-radius: 50%;
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer; transition: background .12s; font-family: var(--mono);
+  z-index: 10;
+}
+.user-popup-close:hover { background: rgba(0,0,0,.6); }
+.user-popup-inner { position: relative; }
 </style>
 </head>
 <body>
@@ -704,6 +786,37 @@ input, textarea { font-family: var(--sans); }
   <div class="panel-body" id="profile-body"></div>
 </div>
 
+<!-- USER PROFILE POPUP -->
+<div class="user-popup-overlay" id="user-popup-overlay" onclick="closeUserPopup(event)">
+  <div class="user-popup-card user-popup-inner" id="user-popup-card">
+    <button class="user-popup-close" onclick="document.getElementById('user-popup-overlay').classList.remove('open')">✕</button>
+    <div class="user-popup-banner" id="user-popup-banner"></div>
+    <div class="user-popup-avatar-row">
+      <div class="user-popup-av" id="user-popup-av">
+        <div class="user-popup-online-ring" id="user-popup-online-ring"></div>
+      </div>
+      <div class="user-popup-action-row">
+        <button class="user-popup-msg-btn" id="user-popup-msg-btn" onclick="handlePopupOpenChat()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Message
+        </button>
+        <button class="user-popup-add-btn" id="user-popup-add-btn" onclick="handlePopupAddFriend()"></button>
+      </div>
+    </div>
+    <div class="user-popup-body">
+      <div class="user-popup-name-row">
+        <span class="user-popup-alias" id="user-popup-alias"></span>
+        <span class="user-popup-online-label" id="user-popup-online-label" style="display:none">● online</span>
+        <span class="user-popup-offline-label" id="user-popup-offline-label" style="display:none">● offline</span>
+      </div>
+      <div class="user-popup-bio" id="user-popup-bio"></div>
+      <hr class="user-popup-divider">
+      <div class="user-popup-meta" id="user-popup-meta"></div>
+      <div class="user-popup-badges" id="user-popup-badges"></div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -731,6 +844,10 @@ let feedUnsub = null;
 let openCommentPostId = null;
 let composeMediaType = 'text';
 let composeImageData = null;
+
+// ── USER POPUP STATE ──
+let popupTargetUsername = null;
+let popupFriendStatus = null; // 'none' | 'pending' | 'friends'
 
 // ── UTILS ──
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -772,6 +889,8 @@ Object.assign(window, {
   voteOnPoll, closePoll, deletePoll,
   voteOnIdea, submitIdea, deleteIdea,
   submitChangelog, deleteChangelog,
+  showUserProfile, closeUserPopup, handlePopupAddFriend, handlePopupOpenChat,
+  addPollOption, submitPoll, updateIdeaCount,
 });
 
 // ── INIT ──
@@ -941,11 +1060,13 @@ function renderPostCard(p) {
     if (ytMatch) mediaHtml = `<div class="post-media"><div class="post-yt-wrap"><iframe src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen class="post-yt"></iframe></div></div>`;
     else mediaHtml = `<div class="post-media"><video src="${esc(p.mediaUrl)}" controls class="post-video" preload="metadata"></video></div>`;
   }
+  // Avatar and alias are clickable to open profile popup (unless it's your own post → opens your profile panel)
+  const avClick = p.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(p.authorUsername)}')"`;
   return `<div class="post-card" id="post-${p._id}">
     <div class="post-header">
-      <div class="post-av" style="border-color:${p.color}">${p.emoji}</div>
+      <div class="post-av" style="border-color:${p.color};cursor:pointer" ${avClick}>${p.emoji}</div>
       <div style="flex:1;min-width:0">
-        <div class="post-alias" style="color:${p.color}">${esc(p.alias)}</div>
+        <div class="post-alias" style="color:${p.color};cursor:pointer" ${avClick}>${esc(p.alias)}</div>
         <div class="post-time">${fmtTime(p.createdAt)}</div>
       </div>
       ${deleteBtn}
@@ -1001,10 +1122,12 @@ function renderComments(postId, comments) {
   listEl.innerHTML = comments.map(c => {
     const likedClass = c.myReaction === 'like' ? 'liked' : '';
     const deleteBtn = (c.isMe || isAdmin) ? `<button class="comment-react" onclick="deleteComment('${c._id}','${postId}')" style="color:var(--red)">✕</button>` : '';
+    // Avatar and alias clickable — own comment opens profile panel, others open popup
+    const avClick = c.isMe ? `onclick="openPanel('profile')"` : `onclick="showUserProfile('${esc(c.authorUsername)}')"`;
     return `<div class="comment-row">
-      <div class="comment-av" style="border-color:${c.color}">${c.emoji}</div>
+      <div class="comment-av" style="border-color:${c.color};cursor:pointer" ${avClick}>${c.emoji}</div>
       <div class="comment-content">
-        <div class="comment-alias" style="color:${c.color}">${esc(c.alias)}</div>
+        <div class="comment-alias" style="color:${c.color};cursor:pointer" ${avClick}>${esc(c.alias)}</div>
         <div class="comment-text">${esc(c.text)}</div>
         <div class="comment-meta">
           <span class="comment-time">${fmtTime(c.createdAt)}</span>
@@ -1091,6 +1214,7 @@ function renderConvList(filter = '') {
     const ts = c.lastMessage ? fmtTime(c.lastMessage.ts) : '';
     const unreadHtml = c.unread > 0 ? `<div class="unread-chip">${c.unread}</div>` : '';
     const onlineDotHtml = `<div class="online-dot ${c.isOnline ? 'visible' : ''}"></div>`;
+    // DM conv items always open the chat, never the profile popup
     return `<div class="conv-item ${active}" onclick="openConv('${esc(c.username)}','${esc(c.alias)}','${esc(c.emoji)}','${esc(c.color)}')">
       <div class="conv-av-wrap">
         <div class="conv-av" style="border-color:${c.color}">${c.emoji}</div>
@@ -1352,7 +1476,185 @@ function closeAllPanels(closeOverlay=true) {
   ['notifs-panel','friends-panel','profile-panel'].forEach(id=>document.getElementById(id).classList.remove('open'));
   if (closeOverlay) document.getElementById('overlay').classList.remove('open');
 }
-document.addEventListener('keydown', e => { if (e.key==='Escape') closeAllPanels(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape') { closeAllPanels(); document.getElementById('user-popup-overlay').classList.remove('open'); } });
+
+// ══════════════════════════════════════════════
+// ── USER PROFILE POPUP ──
+// ══════════════════════════════════════════════
+
+async function showUserProfile(username) {
+  // If clicking your own profile, open the profile panel instead
+  if (username === myUsername) { openPanel('profile'); return; }
+
+  popupTargetUsername = username;
+  const overlay = document.getElementById('user-popup-overlay');
+  overlay.classList.add('open');
+
+  // Reset to loading state
+  const aliasEl = document.getElementById('user-popup-alias');
+  const avEl    = document.getElementById('user-popup-av');
+  aliasEl.textContent = '…';
+  aliasEl.style.color = 'var(--text)';
+  // Clear emoji text node (first child before the ring div)
+  const ring = document.getElementById('user-popup-online-ring');
+  while (avEl.firstChild !== ring) avEl.removeChild(avEl.firstChild);
+  document.getElementById('user-popup-bio').textContent = '';
+  document.getElementById('user-popup-badges').innerHTML = '';
+  document.getElementById('user-popup-meta').innerHTML = '<span style="opacity:.4">loading…</span>';
+  document.getElementById('user-popup-add-btn').style.display = 'none';
+  document.getElementById('user-popup-msg-btn').style.display = 'none';
+  document.getElementById('user-popup-online-label').style.display = 'none';
+  document.getElementById('user-popup-offline-label').style.display = 'none';
+
+  try {
+    const [allUsers, friends, sentReqs, lbData] = await Promise.all([
+      client.query("friends:getAllUsers", { token: sessionToken }),
+      client.query("friends:getMyFriends", { token: sessionToken }),
+      client.query("friends:getSentRequests", { token: sessionToken }),
+      client.query("hub:getLeaderboard", { token: sessionToken }),
+    ]);
+
+    // If popup was closed while loading, bail out
+    if (!overlay.classList.contains('open') || popupTargetUsername !== username) return;
+
+    const user = allUsers.find(u => u.username === username);
+    if (!user) { overlay.classList.remove('open'); return; }
+
+    const isFriend  = friends.some(f => f.username === username);
+    const isPending = sentReqs.some(r => r.toUsername === username);
+    popupFriendStatus = isFriend ? 'friends' : isPending ? 'pending' : 'none';
+
+    // Banner gradient using user color
+    document.getElementById('user-popup-banner').style.cssText =
+      `height:68px;background:linear-gradient(135deg,${user.color}55 0%,${user.color}11 60%,transparent 100%);border-bottom:1px solid ${user.color}33`;
+
+    // Avatar
+    avEl.style.borderColor = user.color;
+    avEl.insertAdjacentText('afterbegin', user.emoji);
+
+    // Online ring
+    ring.classList.toggle('visible', !!user.isOnline);
+
+    // Name + online status
+    aliasEl.textContent = user.alias;
+    aliasEl.style.color = user.color;
+    const onlineLabel  = document.getElementById('user-popup-online-label');
+    const offlineLabel = document.getElementById('user-popup-offline-label');
+    if (user.isOnline) {
+      onlineLabel.style.display = 'inline';
+      offlineLabel.style.display = 'none';
+    } else {
+      onlineLabel.style.display = 'none';
+      offlineLabel.style.display = 'inline';
+    }
+
+    // Bio
+    document.getElementById('user-popup-bio').textContent = user.bio || 'No bio yet.';
+
+    // Meta row — join date + stats from leaderboard
+    const lbUser   = lbData?.users?.find(u => u.username === username);
+    const metaEl   = document.getElementById('user-popup-meta');
+    const parts    = [];
+    if (lbUser?.accountAgeDays != null) {
+      const joinDate = new Date(Date.now() - lbUser.accountAgeDays * 86400000);
+      parts.push(`📅 Joined ${joinDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`);
+    }
+    if (lbUser) {
+      parts.push(`📝 ${lbUser.totalPosts} posts`);
+      parts.push(`👍 ${lbUser.totalPostLikes} likes`);
+    }
+    metaEl.innerHTML = parts.map((p, i) =>
+      i === 0 ? `<span class="user-popup-stat">${p}</span>`
+              : `<span class="user-popup-dot"></span><span class="user-popup-stat">${p}</span>`
+    ).join('');
+
+    // Badges
+    const badgesEl = document.getElementById('user-popup-badges');
+    if (lbUser?.badges?.length) {
+      badgesEl.innerHTML = lbUser.badges.map(b =>
+        `<span class="user-popup-badge" style="color:${b.color};border-color:${b.color}33;background:${b.color}11" title="${esc(b.desc)}">${b.icon} ${esc(b.label)}</span>`
+      ).join('');
+    } else {
+      badgesEl.innerHTML = '';
+    }
+
+    // Add / Friends button
+    const addBtn = document.getElementById('user-popup-add-btn');
+    const msgBtn = document.getElementById('user-popup-msg-btn');
+    addBtn.style.display = 'block';
+
+    if (popupFriendStatus === 'friends') {
+      addBtn.textContent = '✓ friends';
+      addBtn.className = 'user-popup-add-btn friends';
+      addBtn.title = 'Click to remove friend';
+      msgBtn.style.display = 'flex';
+    } else if (popupFriendStatus === 'pending') {
+      addBtn.textContent = '⏳ pending';
+      addBtn.className = 'user-popup-add-btn pending';
+      msgBtn.style.display = 'none';
+    } else {
+      addBtn.textContent = '+ add friend';
+      addBtn.className = 'user-popup-add-btn';
+      msgBtn.style.display = 'none';
+    }
+
+  } catch(e) {
+    console.error('showUserProfile error:', e);
+    overlay.classList.remove('open');
+  }
+}
+
+function closeUserPopup(e) {
+  // Only close when clicking the backdrop, not the card itself
+  if (e && e.target !== document.getElementById('user-popup-overlay')) return;
+  document.getElementById('user-popup-overlay').classList.remove('open');
+  popupTargetUsername = null;
+}
+
+async function handlePopupAddFriend() {
+  if (!popupTargetUsername) return;
+
+  if (popupFriendStatus === 'friends') {
+    if (!confirm('Remove this friend?')) return;
+    try {
+      await client.mutation("friends:removeFriend", { token: sessionToken, friendUsername: popupTargetUsername });
+      if (currentConv === popupTargetUsername) { currentConv = null; hide('chat-view'); show('chat-placeholder'); }
+      popupFriendStatus = 'none';
+      const addBtn = document.getElementById('user-popup-add-btn');
+      addBtn.textContent = '+ add friend';
+      addBtn.className = 'user-popup-add-btn';
+      document.getElementById('user-popup-msg-btn').style.display = 'none';
+      showToast('Friend removed');
+    } catch(e) { showToast('Error removing friend'); }
+
+  } else if (popupFriendStatus === 'none') {
+    try {
+      const alias = document.getElementById('user-popup-alias').textContent;
+      const res = await client.mutation("friends:sendRequest", { token: sessionToken, toAlias: alias });
+      if (res.ok) {
+        showToast(res.message || 'Friend request sent!');
+        popupFriendStatus = 'pending';
+        const addBtn = document.getElementById('user-popup-add-btn');
+        addBtn.textContent = '⏳ pending';
+        addBtn.className = 'user-popup-add-btn pending';
+      } else {
+        showToast(res.error || 'Error sending request');
+      }
+    } catch(e) { showToast('Error sending request'); }
+  }
+}
+
+function handlePopupOpenChat() {
+  if (!popupTargetUsername) return;
+  document.getElementById('user-popup-overlay').classList.remove('open');
+  const conv = convListData.find(c => c.username === popupTargetUsername);
+  const alias = conv?.alias ?? document.getElementById('user-popup-alias').textContent;
+  const emoji = conv?.emoji ?? '🦊';
+  const color = conv?.color ?? '#5b7fff';
+  switchMainTab('dms');
+  openConv(popupTargetUsername, alias, emoji, color);
+  popupTargetUsername = null;
+}
 
 // ══════════════════════════════════════════════
 // ── HUB ──
@@ -1425,10 +1727,16 @@ function renderLeaderboard(data) {
   users.forEach((u, i) => {
     const rank = i + 1;
     const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
-    const rowClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
-    const rankIcon = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-    const meTag = u.username === myUsername ? `<span style="font-size:9px;font-family:var(--mono);color:var(--accent);background:var(--accentBg);border:1px solid var(--accent)33;border-radius:20px;padding:.1rem .4rem">you</span>` : '';
-    html += `<div class="lb-row ${rowClass}">
+    const rowClass  = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const rankIcon  = rank === 1 ? '👑' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+    const meTag = u.username === myUsername
+      ? `<span style="font-size:9px;font-family:var(--mono);color:var(--accent);background:var(--accentBg);border:1px solid var(--accent)33;border-radius:20px;padding:.1rem .4rem">you</span>`
+      : '';
+    // Clicking a lb row opens profile popup (own row → opens profile panel)
+    const rowClick = u.username === myUsername
+      ? `onclick="openPanel('profile')"`
+      : `onclick="showUserProfile('${esc(u.username)}')"`;
+    html += `<div class="lb-row ${rowClass}" style="cursor:pointer" ${rowClick}>
       <div class="lb-rank ${rankClass}">${rankIcon}</div>
       <div class="lb-av" style="border-color:${u.color}">${u.emoji}</div>
       <div class="lb-info">
@@ -1504,10 +1812,10 @@ function renderChangelog(entries) {
 }
 
 async function submitChangelog() {
-  const title = document.getElementById('cl-title')?.value.trim();
-  const body  = document.getElementById('cl-body')?.value.trim();
+  const title   = document.getElementById('cl-title')?.value.trim();
+  const body    = document.getElementById('cl-body')?.value.trim();
   const version = document.getElementById('cl-version')?.value.trim();
-  const tag   = document.getElementById('cl-tag')?.value;
+  const tag     = document.getElementById('cl-tag')?.value;
   if (!title || !body) { showToast('Fill in title and body'); return; }
   try {
     const res = await client.mutation("hub:createChangelog", { token: sessionToken, title, body, version: version || undefined, tag });
@@ -1544,13 +1852,13 @@ function renderPolls(polls) {
   } else {
     html += polls.map(p => {
       const statusChip = p.isClosed ? `<span class="poll-closed-chip">Closed</span>` : `<span class="poll-open-chip">Open</span>`;
-      const adminBtns = isAdmin ? `${!p.isClosed ? `<button class="admin-close-btn" onclick="closePoll('${p._id}')">Close</button>` : ''}<button class="admin-close-btn" onclick="deletePoll('${p._id}')">Delete</button>` : '';
+      const adminBtns  = isAdmin ? `${!p.isClosed ? `<button class="admin-close-btn" onclick="closePoll('${p._id}')">Close</button>` : ''}<button class="admin-close-btn" onclick="deletePoll('${p._id}')">Delete</button>` : '';
       const options = p.options.map((opt, i) => {
-        const count = p.optionCounts[i] || 0;
-        const pct   = p.totalVotes > 0 ? Math.round((count / p.totalVotes) * 100) : 0;
+        const count     = p.optionCounts[i] || 0;
+        const pct       = p.totalVotes > 0 ? Math.round((count / p.totalVotes) * 100) : 0;
         const isVoted   = p.myVoteIndex === i;
         const isWinner  = !p.isClosed && p.totalVotes > 0 && count === Math.max(...p.optionCounts);
-        const votedClass  = isVoted ? 'voted' : '';
+        const votedClass  = isVoted  ? 'voted'  : '';
         const winnerClass = isWinner && !isVoted ? 'winner' : '';
         const canVote = !p.isClosed;
         return `<div class="poll-option">
@@ -1597,8 +1905,6 @@ async function submitPoll() {
     showToast('Poll created!');
   } catch(e) { showToast('Error'); }
 }
-window.addPollOption = addPollOption;
-window.submitPoll = submitPoll;
 
 async function voteOnPoll(pollId, optionIndex) {
   try { await client.mutation("hub:votePoll", { token: sessionToken, pollId, optionIndex }); } catch(e) { showToast('Error voting'); }
@@ -1632,7 +1938,11 @@ function renderIdeas(ideas) {
   } else {
     html += ideas.map((idea, rank) => {
       const delBtn = (idea.isMe || isAdmin) ? `<button class="idea-del-btn" onclick="deleteIdea('${idea._id}')">delete</button>` : '';
-      const isTop = rank === 0 && idea.voteCount > 0;
+      const isTop  = rank === 0 && idea.voteCount > 0;
+      // Idea author alias is clickable
+      const authorClick = idea.isMe
+        ? `onclick="openPanel('profile')"`
+        : `onclick="showUserProfile('${esc(idea.authorUsername)}')"`;
       return `<div class="idea-card" ${isTop?'style="border-color:rgba(245,197,24,.3);background:linear-gradient(90deg,rgba(245,197,24,.04),transparent)"':''}>
         <div class="idea-vote-col">
           <button class="idea-vote-btn ${idea.hasVoted?'voted':''}" onclick="voteOnIdea('${idea._id}')">
@@ -1643,7 +1953,7 @@ function renderIdeas(ideas) {
         <div class="idea-body">
           <div class="idea-text">${isTop?'👑 ':''}${esc(idea.text)}</div>
           <div class="idea-meta">
-            <span class="idea-author-tag">${idea.emoji} <span style="color:${idea.color}">${esc(idea.alias)}</span></span>
+            <span class="idea-author-tag" style="cursor:pointer" ${authorClick}>${idea.emoji} <span style="color:${idea.color}">${esc(idea.alias)}</span></span>
             <span>·</span>
             <span>${fmtTime(idea.createdAt)}</span>
             ${idea.isMe?'<span style="color:var(--accent);font-size:9px">· yours</span>':''}
@@ -1660,11 +1970,10 @@ function updateIdeaCount() {
   const el = document.getElementById('idea-input'), count = document.getElementById('idea-count');
   if (el && count) count.textContent = `${el.value.length} / 200`;
 }
-window.updateIdeaCount = updateIdeaCount;
 
 async function submitIdea() {
   const input = document.getElementById('idea-input');
-  const text = input?.value.trim();
+  const text  = input?.value.trim();
   if (!text || text.length < 5) { showToast('Idea too short (min 5 chars)'); return; }
   try {
     const res = await client.mutation("hub:submitIdea", { token: sessionToken, text });
